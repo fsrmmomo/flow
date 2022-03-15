@@ -30,7 +30,7 @@ random.seed(datetime.now())
 # model_dir = os.path.join(get_prj_root(), "classify/model_predict") #修改：模型model文件夹路径
 # predict_model_pkl = os.path.join(model_dir, "dt3_1_9.pkl") #修改：模型的版本，只用修改此处就行
 
-Instance = namedtuple("Instance", ["features", "label","id"])  # 实例
+Instance = namedtuple("Instance", ["features", "label", "id"])  # 实例
 
 dirs = {
     "video": "./tmp/dt/video",
@@ -48,27 +48,27 @@ def train_and_predict():
     print(instances_dir)
     for file in os.listdir(instances_dir):
         if file[-3:] == "pkl":
-        # if file == "instance_0.pkl":
+            # if file == "instance_0.pkl":
             # pass
-            print("load pkl:" + instances_dir +file)
-            data_list = data_list+load_pkl(instances_dir+file)
+            print("load pkl:" + instances_dir + file)
+            data_list = data_list + load_pkl(instances_dir + file)
             # data_list.append(load_pkl(instances_dir+file))
     print(len(data_list))
-    n_train = int(len(data_list)*0.7)
+    n_train = int(len(data_list) * 0.7)
     d_train = data_list[:n_train]
     d_test = data_list[n_train:]
     print("#my train {}".format(len(d_train)))
     print("#my test {}".format(len(d_test)))
 
     train = []
-    #=====================================
+    # =====================================
     train = d_train
 
     random.shuffle(train)
     train_x = [x.features for x in train]
     train_y = [x.label for x in train]
     test = []
-    #===============================
+    # ===============================
     test = d_test
     random.shuffle(test)
     test_x = [t.features for t in test]
@@ -96,7 +96,6 @@ def train_and_predict():
     predicts = predict_model.predict(test_x)
     pre_y_name = []
 
-
     # 评价模型
     count = 0
     count0 = 0
@@ -113,8 +112,8 @@ def train_and_predict():
     print(all_big)
     print(count1)
 
-    print("big accuracy {:.2f}%".format(count1 / all_big*100))
-    print("ALL Accuracy {:.2f}%".format(count / len(test_x)*100))
+    print("big accuracy {:.2f}%".format(count1 / all_big * 100))
+    print("ALL Accuracy {:.2f}%".format(count / len(test_x) * 100))
     print("##########################")
 
 
@@ -124,7 +123,8 @@ def save_model():
             predict_model = cPickle.load(fp)
         except EOFError:
             print("模型为空")
-        joblib.dump(predict_model,"./even/model/random_forest1.model")
+        joblib.dump(predict_model, "./even/model/random_forest1.model")
+
 
 def classify_flows(mode: 'int', predict_flow):
     """
@@ -184,22 +184,28 @@ def identify_classification(predict_result):
 
 
 def test_classify():
-    # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
-    instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
+    instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
+    # instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
     data_list = []
     print(instances_dir)
     stat = {}
     for file in os.listdir(instances_dir):
         if file[-3:] == "pkl":
-        # if file == "instance_0.pkl":
+            # if file == "instance_0.pkl":
             # pass
-            print("load pkl:" + instances_dir +file)
-            data_list = data_list+load_pkl(instances_dir+file)
+            print("load pkl:" + instances_dir + file)
+            data_list = data_list + load_pkl(instances_dir + file)
 
             # data_list.append(load_pkl(instances_dir+file))
+
+    n_train = int(len(data_list) * 0.7)
+    # d_test = data_list[n_train:]
+    # print("#my test {}".format(len(d_test)))
+    data_list = data_list[n_train:]
+
     for f in data_list:
         if f.id not in stat.keys():
-            stat[f.id] = [f.label,0]
+            stat[f.id] = [f.label, 0]
     print("加载模型。。。")
     with open("./even/model/random_forest1.pkl", "rb") as fp:
         try:
@@ -238,7 +244,7 @@ def test_classify():
     w_flow_n = 0
 
     res_b_n = 0
-    for k,v in stat.items():
+    for k, v in stat.items():
         if v[0] != v[1]:
             # 总错误
             w_flow_n += 1
@@ -246,9 +252,9 @@ def test_classify():
             # 小流变大流
             w_big_flow_n += 1
         if v[0] == 1:
-            b_flow_n +=1
+            b_flow_n += 1
             if v[1] == 1:
-                #大流是大流
+                # 大流是大流
                 c_flow_n += 1
         if v[1] == 1:
             res_b_n += 1
@@ -262,24 +268,19 @@ def test_classify():
     print("aLL feature Accuracy {:.2f}%".format(count / len(test_x) * 100))
 
     print("流的数量是：{}".format(len(stat)))
-    print("识别错误的数量是：{0},占总比例{1:.2f}%".format(w_flow_n,w_flow_n/len(stat)*100))
+    print("大流的数量是：{0},占比{1:.2f}".format(b_flow_n,b_flow_n/len(stat)))
+    print("识别出的大流的数量是：{}".format(res_b_n))
+    print("识别错误的数量是：{0},占总比例{1:.2f}%".format(w_flow_n, w_flow_n / len(stat) * 100))
     print("小流识别成大流的数量是：{0},占小流比例：{1:.2f}%,占大流比例:{2:.2f}%".format(w_big_flow_n,
-                                                       w_big_flow_n/(len(stat)-b_flow_n)*100,
-                                                       w_big_flow_n/b_flow_n*100))
+                                                                 w_big_flow_n / (len(stat) - b_flow_n) * 100,
+                                                                 w_big_flow_n / b_flow_n * 100))
     print("大流识别成大流的数量是：{0},占大流比例：{1:.2f}%,占判定大流的比例：{2:.2f}%".format(c_flow_n,
-                                                       c_flow_n /b_flow_n * 100,
-                                                       c_flow_n/res_b_n*100))
-
-
-
+                                                                    c_flow_n / b_flow_n * 100,
+                                                                    c_flow_n / res_b_n * 100))
 
     # print("real big recall {:.2f}%".format(c_flow_n / b_flow_n * 100))
 
-
-
-
     print(len(data_list))
-
 
 
 # 保存模型
@@ -290,6 +291,6 @@ def test_classify():
 if __name__ == '__main__':
     n = 1
     # for i in range(n):
-        # train_and_predict()
-        # save_model()
+    # train_and_predict()
+    # save_model()
     test_classify()
