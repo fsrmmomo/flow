@@ -63,6 +63,7 @@ def load_pkl(filename):
 def save_pkl(filename,obj,overwrite=True):
     def write():
         with open(filename,'wb') as file:
+            print(filename)
             pickle.dump(obj,file)
             file.flush()
             file.close()

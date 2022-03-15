@@ -2,6 +2,7 @@
 该文件用于读取解析xxx.pkts文件内的相关统计数据
 便于流识别程序识别其准确性
 """
+import pickle
 from collections import namedtuple
 from logging import debug
 from statistics import mean, variance, median
@@ -34,7 +35,7 @@ pkts_dirs = {
 win_size = 10  # 窗口大小
 limit = 100000
 
-Instance = namedtuple("Instance", ["features", "label"])  # 实例
+Instance = namedtuple("Instance", ["features", "label","id"])  # 实例
 
 def to_int(str):
     """
@@ -190,6 +191,78 @@ def read_pkts_generate_instances(filename, label):
 
     return feature_list
 
+# 读取我的特征文件然后生成对应的pkl
+def read_pkl_to_instance(filename):
+    # print(filename)
+    feature_list = []
+    with open(filename,'rb') as f:
+        f_list = pickle.load(f)
+        # print(f_list[:10])
+        for f in f_list:
+            # print(f)
+            feature = f[1][:5]
+            feature.append(f[1][6]-f[1][5])
+            feature.append(f[1][8]-f[1][7])
+            feature.append(f[1][9])
+            feature.append(f[1][10])
+            feature.append(f[1][11])
+
+            # one_flow_feature = Instance(features=f[1], label=f[2])
+            one_flow_feature = Instance(features=feature, label=f[2],id=f[0])
+            feature_list.append(one_flow_feature)
+    return feature_list
+
+
+
+def read_pkl():
+    wf = './data/feature/timeWin/SB-F-202201051400/0.05/'
+    pre = '../../Data/feature/timeWin/SB-F-202201051400/'
+    wname = wf + '0.pkl'
+
+    with open(wname, 'rb') as f:
+        f_list = pickle.load(f)
+        # for i in f_list[:200]:
+        sum = 0
+        n_train = int(len(f_list) * 0.7)
+        for i in f_list[n_train:]:
+            if i[2] == 1:
+                sum += 1
+
+        print(sum)
+    # wname = './data/instances/instance_0.pkl'
+    # with open(wname, 'rb') as f:
+    #     f_list = pickle.load(f)
+    #     for i in f_list[:200]:
+    #         print(i)
+
+
+def generate_instance_pkl_by_feature_pkl():
+    """
+    读取所有的feature pkl，生成instance
+    :return:
+    """
+    instances_dir = os.path.join(get_prj_root(), "./data/instances")  # 修改：instances_dir实例的路径
+    # pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/0.05/")
+    pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/0.05/")
+    instances_dir = os.path.join(get_prj_root(), "./data/instances/test")  # 修改：instances_dir实例的路径
+
+    # data_list = []
+    # print(instances_dir)
+    for file in os.listdir(pkl_dir):
+        if file[-3:] == "pkl":
+        # if file == "0.pkl":
+            instances = []
+            # pass
+            fname = pkl_dir +file
+            print("load pkl:" + fname)
+            instances = read_pkl_to_instance(filename=fname)
+            print("{} 流的数量：{}".format(fname, len(instances)))
+
+            save_file = "instance_"+file
+            save_pkl(os.path.join(instances_dir, save_file), instances)
+
+
+
 
 def generate_instances_pkl():
     """
@@ -203,11 +276,14 @@ def generate_instances_pkl():
         print("parsing {} catalogue".format(dirname))
         print("{} pkts数量：{}".format(dirname, len(pkts_list)))
         for pkts in pkts_list:
-            instances = instances + read_pkts_generate_instances(filename=pkts, label=generate_label(flow_type))
+            # instances = instances + read_pkts_generate_instances(filename=pkts, label=generate_label(flow_type))
+            instances = instances + read_pkl_to_instance(filename=pkts)
             print("flow {} finished".format(pkts))
         print("{} 流的数量：{}".format(dirname, len(instances)))
         print(instances)
         save_pkl(os.path.join(instances_dir, "{}.pkl".format(flow_type)), instances)  # 保存Python内存数据到文件
+
+
 
 
 def generate_label(flow_type):
@@ -383,5 +459,7 @@ if __name__ == "__main__":
     #
     # deal(path, wait_saving_list)
 
-    generate_instances_pkl()
+    # generate_instances_pkl()
+    # read_pkl()
+    generate_instance_pkl_by_feature_pkl()
     # read_pkts_generate_instances(filename="./tmp/pkts/video/Vimeo_Workstation.pkts", label='video')
