@@ -35,7 +35,8 @@ pkts_dirs = {
 win_size = 10  # 窗口大小
 limit = 100000
 
-Instance = namedtuple("Instance", ["features", "label","id"])  # 实例
+Instance = namedtuple("Instance", ["features", "label", "id"])  # 实例
+
 
 def to_int(str):
     """
@@ -70,148 +71,71 @@ def get_filename(path):
     return filename_list
 
 
-def read_pkts(filename):
-    """
-    解析pkts文件内容
-    """
-    # 定义列表保存前10个包的大小和包间隔
-    packet_size_list = []
-    packet_interval_list = []
-    # 保存流编号和传输协议
-    flow_no = ''
-    flow_protocol = []
-    # 将第一行的流编号
-    with open(filename, 'r') as f:
-        flow_no = f.readline().split()[3]
-        flow_protocol.append(f.readline().split()[2])
-        f.close()
 
-    # 找到同一个流的前10个包的包大小和包间隔
-    with open(filename, 'r') as f:
-        for line in f.readlines():
-            # 找到流编号相同的
-            if flow_no == line.split()[3]:
-                packet_size_list.append(int(line.split()[1]))
-                packet_interval_list.append(to_int(line.split()[4]))
-            # 有10个数据 退出
-            if len(packet_size_list) == 10:
-                break
-        f.close()
-    if len(packet_size_list) < 10:
-        return []
+#               0     1     2           3           4           5           6           7           8         9         10      11
+# feature = [总Bytes,包数, max bytes , min bytes, aver bytes, start windows,end win, start time, end time, max twin, min twin, aver twin]
 
-    # 计算特征值 (前五个包大小，后五个包间隔）：最小值，最大值，平均值，方差，中位数
-    feature_list = []
-    # 计算前10个包大小的5个特征值
-    feature_list.append(min(packet_size_list))  # 最小值
-    feature_list.append(max(packet_size_list))  # 最大值
-    feature_list.append(mean(packet_size_list))  # 平均值
-    feature_list.append(variance(packet_size_list))  # 方差
-    feature_list.append(median(packet_size_list))  # 中位数
-    # 计算前10个包间隔的5个特征值
-    packet_interval_list.remove(-1)
-    feature_list.append(min(packet_interval_list))  # 最小值
-    feature_list.append(max(packet_interval_list))  # 最大值
-    feature_list.append(mean(packet_interval_list))  # 平均值
-    feature_list.append(variance(packet_interval_list))  # 方差
-    feature_list.append(median(packet_interval_list))  # 中位数
+#               0     1     2           3           4           5              6          7                 8         9
+# feature = [总Bytes,包数, max bytes , min bytes, aver bytes,  windows size, time win size,  max twin, min twin, aver twin]
 
-    feature_list.append('iot')  # label
-    # feature_list.append('voip')  # label
-
-    # 返回结果的列表 第一个为特征 第二个为五元组 暂时只有传输协议
-    res_list = []
-    res_list.append(feature_list)
-    flow_protocol[0] = "五元组 " + flow_protocol[0]
-    res_list.append(flow_protocol)
-
-    return feature_list
-
-
-def read_pkts_generate_instances(filename, label):
-    """
-    解析pkts文件内容 然后生成可以训练的带标签的数据 训练模型
-    """
-    # 取出该文件中不同的流的编号
-    flow_id_list = []
-    with open(filename, 'r') as f:
-        for line in f.readlines():
-            flow_no = line.split()[3]
-            if flow_no not in flow_id_list:
-                flow_id_list.append(flow_no)
-
-    # 定义列表保存流的大小和间隔
-    flow_size_list = []
-    flow_interval_list = []
-    # 每个不同的流取前十个包的数据
-    for flow_no in flow_id_list:
-        # 定义列表保存包的大小和包间隔
-        packet_size_list = []
-        packet_interval_list = []
-        with open(filename, 'r') as f:
-            for line in f.readlines():
-                # 找到流编号相同的
-                if flow_no == line.split()[3]:
-                    packet_size_list.append(int(line.split()[1]))
-                    packet_interval_list.append(to_int(line.split()[4]))
-                # 有10个数据 退出
-                if len(packet_size_list) == 10:
-                    break
-            f.close()
-        flow_size_list.append(packet_size_list)
-        flow_interval_list.append(packet_interval_list)
-
-    # 将小于10个包的流舍弃掉
-    for i in range(len(flow_size_list)):
-        if len(flow_size_list[i]) < 10:
-            flow_size_list.remove(flow_size_list[i])
-            flow_interval_list.remove(flow_interval_list[i])
-    # 计算特征值 (前五个包大小，后五个包间隔）：最小值，最大值，平均值，方差，中位数
-    feature_list = []
-    for i in range(len(flow_size_list)):
-        tmp_list = []
-        # 计算前10个包大小的5个特征值
-        tmp_list.append(min(flow_size_list[i]))  # 最小值
-        tmp_list.append(max(flow_size_list[i]))  # 最大值
-        tmp_list.append(mean(flow_size_list[i]))  # 平均值
-        tmp_list.append(variance(flow_size_list[i]))  # 方差
-        tmp_list.append(median(flow_size_list[i]))  # 中位数
-        # 计算前10个包间隔的5个特征值
-        # 将-1去掉
-        flow_interval_list[i].remove(-1)
-        tmp_list.append(min(flow_interval_list[i]))  # 最小值
-        tmp_list.append(max(flow_interval_list[i]))  # 最大值
-        tmp_list.append(mean(flow_interval_list[i]))  # 平均值
-        tmp_list.append(variance(flow_interval_list[i]))  # 方差
-        tmp_list.append(median(flow_interval_list[i]))  # 中位数
-
-        # 添加标签
-        one_flow_feature = Instance(features=tmp_list, label=label)
-        feature_list.append(one_flow_feature)
-
-    return feature_list
-
+#               0     1     2           3           4           5              6          7                 8         9         10      11
+# feature = [总Bytes,包数, max bytes , min bytes, aver bytes, start windows,end win, windows size, time win size,  max twin, min twin, aver twin]
 # 读取我的特征文件然后生成对应的pkl
-def read_pkl_to_instance(filename):
+def read_pkl_to_instance(filename,big_dict):
     # print(filename)
     feature_list = []
-    with open(filename,'rb') as f:
+    with open(filename, 'rb') as f:
         f_list = pickle.load(f)
         # print(f_list[:10])
+
+        # 统计流的数量和总的流大小
+        # tmp_dict = {}
+        all_bytes = 0
+        all_pkts = 0
+        # f = [map_key, feature, lable]
+        for f in f_list:
+            # tmp_dict[f[0]] = 0
+            all_bytes += f[1][0]
+            all_pkts += f[1][1]
+        # print(len(f_list))
+        x = 0
+
+
+
         for f in f_list:
             # print(f)
-            feature = f[1][:5]
-            feature.append(f[1][6]-f[1][5])
-            feature.append(f[1][8]-f[1][7])
+            # feature = f[1][:5]
+            feature = f[1][:7]
+            feature.append(f[1][6] - f[1][5])
+            feature.append(f[1][8] - f[1][7])
             feature.append(f[1][9])
             feature.append(f[1][10])
             feature.append(f[1][11])
 
-            # one_flow_feature = Instance(features=f[1], label=f[2])
-            one_flow_feature = Instance(features=feature, label=f[2],id=f[0])
-            feature_list.append(one_flow_feature)
-    return feature_list
+            feature[0] /= all_bytes
+            # feature[2] /= all_bytes
+            # feature[3] /= all_bytes
+            # feature[4] /= all_bytes
+            feature[1] /= all_pkts
+            feature[5] /= all_pkts
+            feature[6] /= all_pkts
+            feature[7] /= all_pkts
 
+            # one_flow_feature = Instance(features=f[1], label=f[2])
+            if f[0] in big_dict.keys():
+                # print("big")
+                one_flow_feature = Instance(features=feature, label=1, id=f[0])
+            else:
+                one_flow_feature = Instance(features=feature, label=0, id=f[0])
+
+            # one_flow_feature = Instance(features=feature, label=f[2], id=f[0])
+            feature_list.append(one_flow_feature)
+
+            x += 1
+            # if x<5:
+            #     print(feature)
+            #     print(feature)
+    return feature_list
 
 
 def read_pkl():
@@ -242,27 +166,47 @@ def generate_instance_pkl_by_feature_pkl():
     :return:
     """
     instances_dir = os.path.join(get_prj_root(), "./data/instances")  # 修改：instances_dir实例的路径
-    # pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/0.05/")
+    pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/0.05/")
+    count_file = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/count.pkl")
     pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/0.05/")
     instances_dir = os.path.join(get_prj_root(), "./data/instances/test")  # 修改：instances_dir实例的路径
+    count_file = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/count.pkl")
 
     # data_list = []
     # print(instances_dir)
+    # big_percent = 0.2
+    big_percent = 0.05
+
+    f_list = []
+    big_dict = {}
+
+    with open(count_file, 'rb') as f:
+        sorted_list = pickle.load(f)
+
+        big_dict = {}
+        bound = int(len(sorted_list) * big_percent)
+        for k in sorted_list[:bound]:
+            big_dict[k[0]] = k[1]
+        # [map_key, feature, lable]
+
+        # print(sorted_list[bound - 100:bound])
+
+
     for file in os.listdir(pkl_dir):
         if file[-3:] == "pkl":
         # if file == "0.pkl":
             instances = []
             # pass
-            fname = pkl_dir +file
+            fname = pkl_dir + file
             print("load pkl:" + fname)
-            instances = read_pkl_to_instance(filename=fname)
+            instances = read_pkl_to_instance(filename=fname,big_dict=big_dict)
             print("{} 流的数量：{}".format(fname, len(instances)))
 
-            save_file = "instance_"+file
+            save_file = "instance_" + file
             save_pkl(os.path.join(instances_dir, save_file), instances)
 
 
-
+# def change_label
 
 def generate_instances_pkl():
     """
@@ -272,7 +216,7 @@ def generate_instances_pkl():
     instances_dir = os.path.join(get_prj_root(), "./even/instances")  # 修改：instances_dir实例的路径
     for flow_type, dirname in pkts_dirs.items():
         instances = []
-        pkts_list = glob.glob(dirname + "/*.pkts") # 获取每个pkts文件
+        pkts_list = glob.glob(dirname + "/*.pkts")  # 获取每个pkts文件
         print("parsing {} catalogue".format(dirname))
         print("{} pkts数量：{}".format(dirname, len(pkts_list)))
         for pkts in pkts_list:
@@ -282,8 +226,6 @@ def generate_instances_pkl():
         print("{} 流的数量：{}".format(dirname, len(instances)))
         print(instances)
         save_pkl(os.path.join(instances_dir, "{}.pkl".format(flow_type)), instances)  # 保存Python内存数据到文件
-
-
 
 
 def generate_label(flow_type):

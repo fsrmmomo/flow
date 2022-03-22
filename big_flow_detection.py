@@ -41,7 +41,7 @@ dirs = {
 # instances_dir = os.path.join(get_prj_root(), "./even/instances")  # 修改：instances路径
 instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
 
-
+my_data_list = []
 def train_and_predict():
     instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
     data_list = []
@@ -57,6 +57,8 @@ def train_and_predict():
     n_train = int(len(data_list) * 0.7)
     d_train = data_list[:n_train]
     d_test = data_list[n_train:]
+    # my_data_list = data_list
+    my_data_list.extend(data_list)
     print("#my train {}".format(len(d_train)))
     print("#my test {}".format(len(d_test)))
 
@@ -96,6 +98,9 @@ def train_and_predict():
     predicts = predict_model.predict(test_x)
     pre_y_name = []
 
+    acc = predict_model.score(test_x, test_y)  # 根据给定数据与标签返回正确率的均值
+    print('决策树模型评价:', acc)
+
     # 评价模型
     count = 0
     count0 = 0
@@ -115,6 +120,7 @@ def train_and_predict():
     print("big accuracy {:.2f}%".format(count1 / all_big * 100))
     print("ALL Accuracy {:.2f}%".format(count / len(test_x) * 100))
     print("##########################")
+    test_classify()
 
 
 def save_model():
@@ -184,24 +190,27 @@ def identify_classification(predict_result):
 
 
 def test_classify():
-    instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
-    # instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
+    # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
+    instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
     data_list = []
     print(instances_dir)
     stat = {}
-    for file in os.listdir(instances_dir):
-        if file[-3:] == "pkl":
-            # if file == "instance_0.pkl":
-            # pass
-            print("load pkl:" + instances_dir + file)
-            data_list = data_list + load_pkl(instances_dir + file)
+    if len(my_data_list) == 0:
+        for file in os.listdir(instances_dir):
+            if file[-3:] == "pkl":
+                # if file == "instance_0.pkl":
+                # pass
+                print("load pkl:" + instances_dir + file)
+                data_list = data_list + load_pkl(instances_dir + file)
 
-            # data_list.append(load_pkl(instances_dir+file))
+                # data_list.append(load_pkl(instances_dir+file))
+    else:
+        data_list = my_data_list
 
     n_train = int(len(data_list) * 0.7)
     # d_test = data_list[n_train:]
     # print("#my test {}".format(len(d_test)))
-    data_list = data_list[n_train:]
+    # data_list = data_list[n_train:]
 
     for f in data_list:
         if f.id not in stat.keys():
@@ -224,10 +233,13 @@ def test_classify():
     count1 = 0
     for idx in range(len(test_x)):
         if int(predicts[idx]) == int(test_y[idx]):
+            #预测正确
             count += 1
             if int(predicts[idx]) == 0:
+                #小流正确
                 count0 += 1
             if int(predicts[idx]) == 1:
+                #大流正确
                 # stat[data_list[idx].id][1] = 1
                 count1 += 1
         if int(predicts[idx]) == 1:
@@ -235,8 +247,7 @@ def test_classify():
 
     print(type(test_y[0]))
     all_big = sum(test_y)
-    print(all_big)
-    print(count1)
+
     b_flow_n = 0
     c_flow_n = 0
 
@@ -244,6 +255,7 @@ def test_classify():
     w_flow_n = 0
 
     res_b_n = 0
+    print(len(stat))
     for k, v in stat.items():
         if v[0] != v[1]:
             # 总错误
@@ -263,6 +275,13 @@ def test_classify():
     print(w_big_flow_n)
     print(w_flow_n)
     print(res_b_n)
+
+    print("特征数："+ str(len(data_list)))
+    print("大流特征数："+ str(all_big))
+    print("大流正确特征数："+ str(count1))
+    print("大流特征数占比：{:.2f}%".format(all_big/len(data_list)* 100))
+    print("小流特征数占比：{:.2f}%".format((1-all_big/len(data_list))* 100))
+    # print("大流正确特征数："+ str(count1))
 
     print("all feature big recall {:.2f}%".format(count1 / all_big * 100))
     print("aLL feature Accuracy {:.2f}%".format(count / len(test_x) * 100))
@@ -291,6 +310,6 @@ def test_classify():
 if __name__ == '__main__':
     n = 1
     # for i in range(n):
-    # train_and_predict()
     # save_model()
+    # train_and_predict()
     test_classify()
