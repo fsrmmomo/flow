@@ -160,7 +160,7 @@ def read_pkl():
     #         print(i)
 
 
-def generate_instance_pkl_by_feature_pkl():
+def generate_instance_pkl_by_feature_pkl(big_percent):
     """
     读取所有的feature pkl，生成instance
     :return:
@@ -175,7 +175,36 @@ def generate_instance_pkl_by_feature_pkl():
     # data_list = []
     # print(instances_dir)
     # big_percent = 0.2
-    big_percent = 0.05
+    # big_percent = 0.05
+
+    data_name = "SB-F-202201051400"
+    data_name = "SB-F-202201021400"
+
+    fn_head = "./data/feature/timeWin/" + data_name +"/"
+    instances_head = "./data/instances/" + data_name + "/"
+
+    # pkl_dir = fn_head + str(big_percent) + '/'
+    pkl_dir = fn_head + '0.05/'
+    instances_dir = instances_head + str(big_percent) + '/'
+    count_file = fn_head + "count.pkl"
+
+
+    if os.path.isdir(pkl_dir):
+        print("是目录")
+    else:
+        print("不是")
+        os.mkdir(pkl_dir)
+    if os.path.isdir(instances_head):
+        print("是目录")
+    else:
+        print("不是")
+        os.mkdir(instances_head)
+
+    if os.path.isdir(instances_dir):
+        print("是目录")
+    else:
+        print("不是")
+        os.mkdir(instances_dir)
 
     f_list = []
     big_dict = {}
@@ -191,14 +220,20 @@ def generate_instance_pkl_by_feature_pkl():
 
         # print(sorted_list[bound - 100:bound])
 
-
-    for file in os.listdir(pkl_dir):
+    y = 0
+    files = os.listdir(pkl_dir)
+    files.sort(key = lambda x:(len(x),x))
+    # print(files)
+    for file in files:
         if file[-3:] == "pkl":
+
         # if file == "0.pkl":
+            y+=1
+            print("processing file {}".format(y))
             instances = []
             # pass
             fname = pkl_dir + file
-            print("load pkl:" + fname)
+            # print("load pkl:" + fname)
             instances = read_pkl_to_instance(filename=fname,big_dict=big_dict)
             print("{} 流的数量：{}".format(fname, len(instances)))
 
@@ -403,5 +438,10 @@ if __name__ == "__main__":
 
     # generate_instances_pkl()
     # read_pkl()
-    generate_instance_pkl_by_feature_pkl()
+    big_list = [0.05, 0.1, 0.2, 0.3]
+    # big_list = [0.1, 0.2, 0.3]
+    for b in big_list:
+        print("processing b={}:".format(b))
+        generate_instance_pkl_by_feature_pkl(b)
+
     # read_pkts_generate_instances(filename="./tmp/pkts/video/Vimeo_Workstation.pkts", label='video')

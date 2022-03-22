@@ -39,18 +39,19 @@ dirs = {
 }
 # instances_dir = os.path.join(get_prj_root(), "./classify/instances2")  # 修改：instances路径
 # instances_dir = os.path.join(get_prj_root(), "./even/instances")  # 修改：instances路径
-instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
+# instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
 
 my_data_list = []
-def train_and_predict():
-    instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
+def train_and_predict(instances_dir):
+    my_data_list.clear()
+    # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
     data_list = []
     print(instances_dir)
     for file in os.listdir(instances_dir):
         if file[-3:] == "pkl":
             # if file == "instance_0.pkl":
             # pass
-            print("load pkl:" + instances_dir + file)
+            # print("load pkl:" + instances_dir + file)
             data_list = data_list + load_pkl(instances_dir + file)
             # data_list.append(load_pkl(instances_dir+file))
     print(len(data_list))
@@ -85,16 +86,20 @@ def train_and_predict():
     # print(train_y[0])
     predict_model.fit(train_x, train_y)  # 对训练数据进行拟合
 
-    with open("./even/model/random_forest1.pkl", "wb") as fp:
+    model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+
+
+    with open(model_file_name, "wb") as fp:
         cPickle.dump(predict_model, fp)
         fp.close()
-    predicts = predict_model.predict(test_x)
+    # predicts = predict_model.predict(test_x)
 
-    with open("./even/model/random_forest1.pkl", "rb") as fp:
+    with open(model_file_name, "rb") as fp:
         try:
             predict_model = cPickle.load(fp)
         except EOFError:
             print("模型为空")
+
     predicts = predict_model.predict(test_x)
     pre_y_name = []
 
@@ -120,7 +125,7 @@ def train_and_predict():
     print("big accuracy {:.2f}%".format(count1 / all_big * 100))
     print("ALL Accuracy {:.2f}%".format(count / len(test_x) * 100))
     print("##########################")
-    test_classify()
+    # test_classify()
 
 
 def save_model():
@@ -189,9 +194,9 @@ def identify_classification(predict_result):
     return res_list
 
 
-def test_classify():
+def test_classify(instances_dir):
     # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
-    instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
+    # instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
     data_list = []
     print(instances_dir)
     stat = {}
@@ -200,7 +205,7 @@ def test_classify():
             if file[-3:] == "pkl":
                 # if file == "instance_0.pkl":
                 # pass
-                print("load pkl:" + instances_dir + file)
+                # print("load pkl:" + instances_dir + file)
                 data_list = data_list + load_pkl(instances_dir + file)
 
                 # data_list.append(load_pkl(instances_dir+file))
@@ -216,7 +221,8 @@ def test_classify():
         if f.id not in stat.keys():
             stat[f.id] = [f.label, 0]
     print("加载模型。。。")
-    with open("./even/model/random_forest1.pkl", "rb") as fp:
+    model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+    with open(model_file_name, "rb") as fp:
         try:
             predict_model = cPickle.load(fp)
         except EOFError:
@@ -311,5 +317,17 @@ if __name__ == '__main__':
     n = 1
     # for i in range(n):
     # save_model()
+
     # train_and_predict()
-    test_classify()
+    big_list = [0.05, 0.1, 0.2, 0.3]
+    # big_list = [0.1, 0.2, 0.3]
+
+    for big_percent in big_list:
+        print("processing b={}:".format(big_percent))
+        data_name = "SB-F-202201051400"
+        instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
+        # train_and_predict(instances_dir)
+
+        # data_name = "SB-F-202201021400"
+        test_instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
+        test_classify(test_instances_dir)
