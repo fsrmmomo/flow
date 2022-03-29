@@ -45,6 +45,7 @@ dirs = {
 
 my_data_list = []
 my_test_data = []
+my_test_model = None
 def train_and_predict(instances_dir):
     my_data_list.clear()
     # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
@@ -67,7 +68,11 @@ def train_and_predict(instances_dir):
     print("#my test {}".format(len(d_test)))
 
     d_train,d_test = train_test_split(data_list,train_size=0.7,random_state=10,shuffle=True)
+
+    global my_test_data
     my_test_data = d_test
+    print("#my train {}".format(len(d_train)))
+    print("#my test {}".format(len(d_test)))
 
     train = []
     # =====================================
@@ -112,6 +117,11 @@ def train_and_predict(instances_dir):
             print("模型为空")
 
     predicts = predict_model.predict(test_x)
+
+    global my_test_model
+
+    my_test_model = predict_model
+
     pre_y_name = []
 
     acc = predict_model.score(test_x, test_y)  # 根据给定数据与标签返回正确率的均值
@@ -205,7 +215,7 @@ def identify_classification(predict_result):
     return res_list
 
 
-def test_classify(instances_dir):
+def test_classify(instances_dir=None):
     # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
     # instances_dir = os.path.join(get_prj_root(), "./data/instances/test/")  # 修改：instances路径
     data_list = []
@@ -237,13 +247,17 @@ def test_classify(instances_dir):
     for f in data_list:
         if f.id not in stat.keys():
             stat[f.id] = [f.label, 0]
+
     print("加载模型。。。")
-    model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
-    with open(model_file_name, "rb") as fp:
-        try:
-            predict_model = cPickle.load(fp)
-        except EOFError:
-            print("模型为空")
+    if my_test_model == None:
+        model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+        with open(model_file_name, "rb") as fp:
+            try:
+                predict_model = cPickle.load(fp)
+            except EOFError:
+                print("模型为空")
+    else:
+        predict_model = my_test_model
     test_x = [x.features for x in data_list]
     test_y = [x.label for x in data_list]
 
@@ -343,8 +357,8 @@ if __name__ == '__main__':
         print("processing b={}:".format(big_percent))
         data_name = "SB-F-202201051400"
         instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
-        # train_and_predict(instances_dir)
+        train_and_predict(instances_dir)
 
-        # data_name = "SB-F-202201021400"
+        data_name = "SB-F-202201021400"
         test_instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
-        test_classify(test_instances_dir)
+        # test_classify(test_instances_dir)
