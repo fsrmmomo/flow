@@ -9,6 +9,8 @@ import random
 
 import _pickle as cPickle
 import joblib
+from sklearn.model_selection import train_test_split
+
 from common_utils import *  # 修改了
 from argparse import ArgumentParser
 from collections import namedtuple
@@ -42,6 +44,7 @@ dirs = {
 # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
 
 my_data_list = []
+my_test_data = []
 def train_and_predict(instances_dir):
     my_data_list.clear()
     # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
@@ -63,6 +66,9 @@ def train_and_predict(instances_dir):
     print("#my train {}".format(len(d_train)))
     print("#my test {}".format(len(d_test)))
 
+    d_train,d_test = train_test_split(data_list,train_size=0.7,random_state=10,shuffle=True)
+    my_test_data = d_test
+
     train = []
     # =====================================
     train = d_train
@@ -76,6 +82,11 @@ def train_and_predict(instances_dir):
     random.shuffle(test)
     test_x = [t.features for t in test]
     test_y = [t.label for t in test]
+
+
+
+
+
 
     # 训练以及预测
     predict_model = RandomForestClassifier(n_jobs=-1)  # 引入训练方法
@@ -125,7 +136,7 @@ def train_and_predict(instances_dir):
     print("big accuracy {:.2f}%".format(count1 / all_big * 100))
     print("ALL Accuracy {:.2f}%".format(count / len(test_x) * 100))
     print("##########################")
-    # test_classify()
+    test_classify()
 
 
 def save_model():
@@ -216,6 +227,12 @@ def test_classify(instances_dir):
     # d_test = data_list[n_train:]
     # print("#my test {}".format(len(d_test)))
     # data_list = data_list[n_train:]
+    # data_list = train_test_split(data_list, train_size=0.7, random_state=10, shuffle=True)
+    if len(my_test_data)!=0:
+        data_list = my_test_data
+
+
+
 
     for f in data_list:
         if f.id not in stat.keys():
