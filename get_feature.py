@@ -1,6 +1,5 @@
 import struct
 
-import pyshark
 from packet_struct import *
 import os
 import sys
@@ -14,12 +13,15 @@ big_percent = 0.05
 
 def read_dat(rf):
     # rf = './raw_data/MAWI/test.dat'
-    # rf = './raw_data/MAWI/dat/SB-F-202201051400.dat'
-    # pre = './feature/timeWin/SB-F-202201051400/'
-    # wf = './feature/timeWin/SB-F-202201051400/'+ str(big_percent) + '/'
+    rf = './raw_data/MAWI/dat/SB-F-202201051400.dat'
+    pre = './data/feature/timeWin/SB-F-202201051400/'
+    wf = './data/feature/timeWin/SB-F-202201051400/origin/'
     rf = './raw_data/MAWI/dat/SB-F-202201021400.dat'
-    pre = './feature/timeWin/SB-F-202201021400/'
-    wf = './feature/timeWin/SB-F-202201021400/' + str(big_percent) + '/'
+    pre = './data/feature/timeWin/SB-F-202201021400/'
+    wf = './data/feature/timeWin/SB-F-202201021400/origin/'
+    # rf = './raw_data/MAWI/dat/SB-F-202201041400.dat'
+    # pre = './data/feature/timeWin/SB-F-202201041400/'
+    # wf = './data/feature/timeWin/SB-F-202201041400/origin/'
     trace_byte_size = 32
     x = 0
     features = []
@@ -55,11 +57,13 @@ def read_dat(rf):
                     tmp_list.append([k, v])
                 features.append(tmp_list)
                 tmp_feature.clear()
+                if len(features)>=180:
+                    break
                 # break
 
             bin_trace = f.read(trace_byte_size)
 
-    if len(tmp_feature) != 0:
+    if len(tmp_feature) != 0 and len(features)<180:
         print('p.time:' + str(p.time))
         tmp_list = []
         for k, v in tmp_feature.items():
@@ -68,22 +72,22 @@ def read_dat(rf):
         tmp_feature.clear()
 
     # save_map = [mapkey:key]
-    save_map = {}
+    # save_map = {}
 
     for k, v in key_map.items():
         sorted_list.append(v)
-        save_map[v[0]] = k
+        # save_map[v[0]] = k
         # print(tmp_feature[v[0]])
         # print(v)
     sorted_list.sort(reverse=True, key=lambda x: x[1])
 
     w_list_name = pre + 'count.pkl'
-    w_map_list_name = pre + 'mapkey_to_key.pkl'
-    with open(w_map_list_name,'wb') as f:
-        pickle.dump(save_map, f)
+    # w_map_list_name = pre + 'mapkey_to_key.pkl'
+    # with open(w_map_list_name,'wb') as f:
+    #     pickle.dump(save_map, f)
 
-    # with open(w_list_name,'wb') as f:
-    #     pickle.dump(sorted_list, f)
+    with open(w_list_name,'wb') as f:
+        pickle.dump(sorted_list, f)
 
     print('len(features):' + str(len(features)))
     # for i in sorted_list:
@@ -93,7 +97,7 @@ def read_dat(rf):
     bound = int(len(sorted_list) * big_percent)
     for k in sorted_list[:bound]:
         big_dict[k[0]] = k[1]
-    print(sorted_list[bound - 100:bound])
+    # print(sorted_list[bound - 100:bound])
     # for k in sorted_list[bound:]:
     #     small_dict[k[0]] = k[1]
 
@@ -111,11 +115,11 @@ def read_dat(rf):
 
 
 
-    # for i in range(len(features)):
-    #     f_list = features[i]
-    #     wname = wf + str(i) + '.pkl'
-    #     with open(wname, 'wb') as f:
-    #         pickle.dump(f_list, f)
+    for i in range(len(features)):
+        f_list = features[i]
+        wname = wf + str(i) + '.pkl'
+        with open(wname, 'wb') as f:
+            pickle.dump(f_list, f)
 
 
 def read_pkl():
@@ -147,11 +151,11 @@ def read_pkl():
     #     print("len :" + str(len(s_list)))
 
 
-#               0     1     2           3           4           5           6           7           8         9         10      11
-# feature = [总Bytes,包数, max bytes , min bytes, aver bytes, start windows,end win, start time, end time, max twin, min twin, aver twin]
+#               0     1     2           3           4           5           6           7           8         9         10      11          12      13
+# feature = [总Bytes,包数, max bytes , min bytes, aver bytes, start windows,end win, start time, end time, max twin, min twin, aver twin, dst port, src port]
 def insert_p(p, tmp_feature, key_map, now_win):
     key = p.src_ip + p.src_port + p.dst_ip + p.dst_port + p.proto
-    key = p.src_ip + " " + p.src_port + " " + p.dst_ip + " " + p.dst_port + " " + p.proto
+    # key = p.src_ip + " " + p.src_port + " " + p.dst_ip + " " + p.dst_port + " " + p.proto
     # key_map = {}
     # tmp_feature = {}
     length = p.length
@@ -181,7 +185,8 @@ def insert_p(p, tmp_feature, key_map, now_win):
         last_feature[10] = min(twin, last_feature[10])
         last_feature[11] = ((last_feature[11] * (last_feature[1] - 2)) + twin) / (last_feature[1] - 1)
     else:
-        last_feature = [0 for _ in range(12)]
+        # last_feature = [0 for _ in range(12)]
+        last_feature = [0 for _ in range(14)]
         last_feature[0] += length
         last_feature[1] += 1
         last_feature[2] = length
@@ -195,7 +200,13 @@ def insert_p(p, tmp_feature, key_map, now_win):
         # last_feature[9] = max(twin,last_feature[9])
         last_feature[10] = sys.maxsize
         # last_feature[11] = ((last_feature[11] * (last_feature[1] - 2)) + twin) / (last_feature[1] - 1)
+
+        last_feature[12] = int(p.src_port)
+        last_feature[13] = int(p.dst_port)
+        # last_feature.append(int(p.src_port))
+        # last_feature.append(int(p.dst_port))
         tmp_feature[map_key] = last_feature
+
 
 
 if __name__ == '__main__':

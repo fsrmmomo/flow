@@ -100,6 +100,8 @@ def read_pkl_to_instance(filename,big_dict):
         # print(len(f_list))
         x = 0
 
+        flow_num = len(f_list)
+
 
 
         for f in f_list:
@@ -112,14 +114,19 @@ def read_pkl_to_instance(filename,big_dict):
             feature.append(f[1][10])
             feature.append(f[1][11])
 
+            feature.append(f[1][12])
+            feature.append(f[1][13])
+
             feature[0] /= all_bytes
-            # feature[2] /= all_bytes
-            # feature[3] /= all_bytes
-            # feature[4] /= all_bytes
             feature[1] /= all_pkts
             feature[5] /= all_pkts
             feature[6] /= all_pkts
             feature[7] /= all_pkts
+            # feature[0] = feature[0]/all_bytes*flow_num
+            # feature[1] = feature[1]/all_pkts*flow_num
+            # feature[5] = feature[5]/all_pkts
+            # feature[6] = feature[6]/all_pkts
+            # feature[7] = feature[7]/all_pkts
 
             # one_flow_feature = Instance(features=f[1], label=f[2])
             if f[0] in big_dict.keys():
@@ -140,51 +147,57 @@ def read_pkl_to_instance(filename,big_dict):
 
 def read_pkl():
     wf = './data/feature/timeWin/SB-F-202201051400/0.05/'
+
+
     pre = '../../Data/feature/timeWin/SB-F-202201051400/'
     wname = wf + '0.pkl'
 
-    with open(wname, 'rb') as f:
-        f_list = pickle.load(f)
-        # for i in f_list[:200]:
-        sum = 0
-        n_train = int(len(f_list) * 0.7)
-        for i in f_list[n_train:]:
-            if i[2] == 1:
-                sum += 1
-
-        print(sum)
-    # wname = './data/instances/instance_0.pkl'
     # with open(wname, 'rb') as f:
     #     f_list = pickle.load(f)
-    #     for i in f_list[:200]:
-    #         print(i)
+    #     # for i in f_list[:200]:
+    #     sum = 0
+    #     n_train = int(len(f_list) * 0.7)
+    #     for i in f_list[n_train:]:
+    #         if i[2] == 1:
+    #             sum += 1
+
+    #     print(sum)
+    wname = './data/instances/SB-F-202201021400/0.05/instance_0.pkl'
+
+    # wname = './data/instances/instance_0.pkl'
+    with open(wname, 'rb') as f:
+        f_list = pickle.load(f)
+        for i in f_list[:100]:
+            print(i)
 
 
-def generate_instance_pkl_by_feature_pkl(big_percent):
+def generate_instance_pkl_by_feature_pkl(big_percent,data_name):
     """
     读取所有的feature pkl，生成instance
     :return:
     """
-    instances_dir = os.path.join(get_prj_root(), "./data/instances")  # 修改：instances_dir实例的路径
-    pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/0.05/")
-    count_file = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/count.pkl")
-    pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/0.05/")
-    instances_dir = os.path.join(get_prj_root(), "./data/instances/test")  # 修改：instances_dir实例的路径
-    count_file = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/count.pkl")
+    # instances_dir = os.path.join(get_prj_root(), "./data/instances")  # 修改：instances_dir实例的路径
+    # pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/0.05/")
+    # count_file = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201051400/count.pkl")
+    # pkl_dir = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/0.05/")
+    # instances_dir = os.path.join(get_prj_root(), "./data/instances/test")  # 修改：instances_dir实例的路径
+    # count_file = os.path.join(get_prj_root(), "./data/feature/timeWin/SB-F-202201021400/count.pkl")
 
     # data_list = []
     # print(instances_dir)
     # big_percent = 0.2
     # big_percent = 0.05
 
-    data_name = "SB-F-202201051400"
-    data_name = "SB-F-202201021400"
+    # data_name = "SB-F-202201051400"
+    # data_name = "SB-F-202201021400"
+    # data_name = "SB-F-202201041400"
 
     fn_head = "./data/feature/timeWin/" + data_name +"/"
     instances_head = "./data/instances/" + data_name + "/"
 
     # pkl_dir = fn_head + str(big_percent) + '/'
-    pkl_dir = fn_head + '0.05/'
+    # pkl_dir = fn_head + '0.05/'
+    pkl_dir = fn_head + 'origin/'
     instances_dir = instances_head + str(big_percent) + '/'
     count_file = fn_head + "count.pkl"
 
@@ -229,7 +242,7 @@ def generate_instance_pkl_by_feature_pkl(big_percent):
 
         # if file == "0.pkl":
             y+=1
-            print("processing file {}".format(y))
+            # print("processing file {}".format(y))
             instances = []
             # pass
             fname = pkl_dir + file
@@ -358,9 +371,10 @@ if __name__ == "__main__":
     # generate_instances_pkl()
     # read_pkl()
     big_list = [0.05, 0.1, 0.2, 0.3]
-    # big_list = [0.1, 0.2, 0.3]
-    for b in big_list:
-        print("processing b={}:".format(b))
-        generate_instance_pkl_by_feature_pkl(b)
+    data_name = ["SB-F-202201051400","SB-F-202201041400","SB-F-202201021400"]
+    for d in data_name:
+        for b in big_list:
+            print("processing d={0} b={1}:".format(d,b))
+            generate_instance_pkl_by_feature_pkl(b,d)
 
     # read_pkts_generate_instances(filename="./tmp/pkts/video/Vimeo_Workstation.pkts", label='video')

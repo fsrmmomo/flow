@@ -64,28 +64,30 @@ def train_and_predict(instances_dir):
     d_test = data_list[n_train:]
     # my_data_list = data_list
     my_data_list.extend(data_list)
-    print("#my train {}".format(len(d_train)))
-    print("#my test {}".format(len(d_test)))
+    # print("#my train {}".format(len(d_train)))
+    # print("#my test {}".format(len(d_test)))
 
     d_train,d_test = train_test_split(data_list,train_size=0.7,random_state=10,shuffle=True)
 
     global my_test_data
     my_test_data = d_test
-    print("#my train {}".format(len(d_train)))
-    print("#my test {}".format(len(d_test)))
+    # print("#my train {}".format(len(d_train)))
+    # print("#my test {}".format(len(d_test)))
 
     train = []
     # =====================================
     train = d_train
 
-    random.shuffle(train)
+    # random.shuffle(train)
     train_x = [x.features for x in train]
+    # train_x = [x[:-2] for x in train_x]
     train_y = [x.label for x in train]
     test = []
     # ===============================
     test = d_test
-    random.shuffle(test)
+    # random.shuffle(test)
     test_x = [t.features for t in test]
+    # test_x = [x[:-2] for x in test_x]
     test_y = [t.label for t in test]
 
 
@@ -248,6 +250,14 @@ def test_classify(instances_dir=None):
         if f.id not in stat.keys():
             stat[f.id] = [f.label, 0]
 
+
+    test_x = [x.features for x in data_list]
+    # test_x = [x[:-2] for x in test_x]
+    # print(len(test_x))
+    # print(len(test_x[0]))
+    test_y = [x.label for x in data_list]
+    # print(len(test_y))
+
     print("加载模型。。。")
     if my_test_model == None:
         model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
@@ -258,8 +268,7 @@ def test_classify(instances_dir=None):
                 print("模型为空")
     else:
         predict_model = my_test_model
-    test_x = [x.features for x in data_list]
-    test_y = [x.label for x in data_list]
+
 
     print("加载完成，开始预测")
     predicts = predict_model.predict(test_x)
@@ -282,7 +291,7 @@ def test_classify(instances_dir=None):
         if int(predicts[idx]) == 1:
             stat[data_list[idx].id][1] = 1
 
-    print(type(test_y[0]))
+    # print(type(test_y[0]))
     all_big = sum(test_y)
 
     b_flow_n = 0
@@ -307,11 +316,11 @@ def test_classify(instances_dir=None):
                 c_flow_n += 1
         if v[1] == 1:
             res_b_n += 1
-    print(b_flow_n)
-    print(c_flow_n)
-    print(w_big_flow_n)
-    print(w_flow_n)
-    print(res_b_n)
+    # print(b_flow_n)
+    # print(c_flow_n)
+    # print(w_big_flow_n)
+    # print(w_flow_n)
+    # print(res_b_n)
 
     print("特征数："+ str(len(data_list)))
     print("大流特征数："+ str(all_big))
@@ -360,5 +369,6 @@ if __name__ == '__main__':
         train_and_predict(instances_dir)
 
         data_name = "SB-F-202201021400"
+        data_name = "SB-F-202201041400"
         test_instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
         # test_classify(test_instances_dir)
