@@ -25,28 +25,20 @@ from sklearn.ensemble import RandomForestClassifier  # 训练模型
 import pandas as pd
 import time
 
+
+from thundersvm import *
+import dill
+
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+
 import pickle
 
-start = time.time()  # 计算时间
-
-random.seed(datetime.now())
-# model_dir = os.path.join(get_prj_root(), "classify/model_predict") #修改：模型model文件夹路径
-# predict_model_pkl = os.path.join(model_dir, "dt3_1_9.pkl") #修改：模型的版本，只用修改此处就行
-
-Instance = namedtuple("Instance", ["features", "label", "id"])  # 实例
-
-dirs = {
-    "video": "./tmp/dt/video",
-    "iot": "./tmp/dt/iot",
-    "car": "./tmp/dt/car",
-}
-# instances_dir = os.path.join(get_prj_root(), "./classify/instances2")  # 修改：instances路径
-# instances_dir = os.path.join(get_prj_root(), "./even/instances")  # 修改：instances路径
-# instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
 
 my_data_list = []
 my_test_data = []
 my_test_model = None
+ss = None
 def train_and_predict(instances_dir):
     my_data_list.clear()
     # instances_dir = os.path.join(get_prj_root(), "./data/instances/")  # 修改：instances路径
@@ -91,6 +83,11 @@ def train_and_predict(instances_dir):
     # test_x = [x[:-2] for x in test_x]
     test_y = [t.label for t in test]
 
+    global ss
+    ss = StandardScaler()
+    train_x = ss.fit_transform(train_x)
+    test_x = ss.transform(test_x)
+
 
 
 
@@ -98,25 +95,37 @@ def train_and_predict(instances_dir):
 
     # 训练以及预测
     predict_model = RandomForestClassifier(n_jobs=-1)  # 引入训练方法
-    predict_model = svm.SVC()
+    # predict_model = svm.SVC(kernel='linear')
+    predict_model = SVC(kernel='linear')
+    predict_model = SGDClassifier()
+    # predict_model = svm.LinearSVC(tol=0.001,max_iter=2000)
     print("正在拟合")
     # print(train_x)
     # print(train_y)
     # print(train_x[0])
     # print(train_y[0])
+    # predict_model.fit(train_x, train_y)  # 对训练数据进行拟合
+    start = time.time()  # 计算时间
     predict_model.fit(train_x, train_y)  # 对训练数据进行拟合
+    elapsed = (time.time() - start)
+    print("Time used:", elapsed)
 
     model_file_name = "./data/model/svm" + instances_dir.split("/")[-2] + ".pkl"
 
-
+    # predict_model.save_to_file(model_file_name)
+    # predict_model.load_from_file(model_file_name)
     with open(model_file_name, "wb") as fp:
         cPickle.dump(predict_model, fp)
+        # joblib.dump(predict_model, fp)
+        # dill.dump(predict_model, fp)
         fp.close()
     # predicts = predict_model.predict(test_x)
 
     with open(model_file_name, "rb") as fp:
         try:
             predict_model = cPickle.load(fp)
+            # predict_model = joblib.load(fp)
+            # predict_model = dill.load(fp)
         except EOFError:
             print("模型为空")
 
@@ -152,71 +161,6 @@ def train_and_predict(instances_dir):
     print("##########################")
     test_classify()
 
-
-def save_model():
-    with open("./even/model/random_forest1.pkl", "rb") as fp:
-        try:
-            predict_model = cPickle.load(fp)
-        except EOFError:
-            print("模型为空")
-        joblib.dump(predict_model, "./even/model/random_forest1.model")
-
-
-def classify_flows(mode: 'int', predict_flow):
-    """
-    该函数用于训练模型并且测试模型的准确度 或者 预测结果
-    :param mode: 0--训练模型    1--预测和分类流并返回
-    :param predict_dir: 待预测的流的目录下的pkl文件
-    :return: 待分类的流的分类结果列表
-    """
-    # 判断是只训练模型 还是 只是预测结果
-    if mode == 0:
-        # 此时训练使用数据训练模型 并且 保存模型 评价模型
-        times = 10
-        sum_predict = 0
-        for _ in range(times):
-            res = train_and_predict()
-            sum_predict = sum_predict + res
-        print("模型准确率为:", sum_predict / times)
-    else:
-        # 使用传递的文件来预测结果并且返回
-        # predict = load_pkl(os.path.join(predict_dir, "predict2.pkl"))
-        with open("./random_forest.pkl", "rb") as fp:
-            try:
-                predict_model = cPickle.load(fp)
-            except EOFError:
-                print("模型为空")
-
-        # test = json.loads(predict_flow)
-        # info("#video test {}".format(len(predict)))
-        #
-        # test.extend(predict)
-        # # random.shuffle(test)
-
-        test_x = [t[:-1] for t in predict_flow]
-
-        predict_result = predict_model.predict(test_x)
-        res_list = identify_classification(predict_result)
-        return res_list
-
-
-def identify_classification(predict_result):
-    """
-    该函数将分类结果的标签转换为具体内容字符串的结果
-    :param predict_result:标签分类结果
-    :return: 字符串分类结果
-    """
-    res_list = []
-    for label in predict_result:
-        if label == 0:
-            res_list.append("videos")
-        elif label == 1:
-            res_list.append("iot")
-        elif label == 2:
-            res_list.append("voip")
-        elif label == 3:
-            res_list.append("AR")
-    return res_list
 
 
 def test_classify(instances_dir=None):
@@ -259,6 +203,8 @@ def test_classify(instances_dir=None):
     # print(len(test_x[0]))
     test_y = [x.label for x in data_list]
     # print(len(test_y))
+
+    test_x = ss.transform(test_x)
 
     print("加载模型。。。")
     if my_test_model == None:
@@ -361,8 +307,9 @@ if __name__ == '__main__':
     # save_model()
 
     # train_and_predict()
-    big_list = [0.05, 0.1, 0.2, 0.3]
-    # big_list = [0.1, 0.2, 0.3]
+    # big_list = [0.05, 0.1, 0.2, 0.3]
+    # big_list = [0.05]
+    big_list = [0.1, 0.2, 0.3]
 
     for big_percent in big_list:
         print("processing b={}:".format(big_percent))
