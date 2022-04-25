@@ -57,7 +57,11 @@ def train_and_predict(instances_dir):
             # pass
             # print("load pkl:" + instances_dir + file)
             data_list = data_list + load_pkl(instances_dir + file)
+
             # data_list.append(load_pkl(instances_dir+file))
+        for l in data_list:
+            my_data_list.extend(l)
+        data_list = my_data_list
     print(len(data_list))
     n_train = int(len(data_list) * 0.7)
     d_train = data_list[:n_train]
@@ -102,9 +106,14 @@ def train_and_predict(instances_dir):
     # print(train_y)
     # print(train_x[0])
     # print(train_y[0])
+    # predict_model.fit(train_x, train_y)  # 对训练数据进行拟合
+    start = time.time()  # 计算时间
     predict_model.fit(train_x, train_y)  # 对训练数据进行拟合
+    elapsed = (time.time() - start)
+    print("Time used:", elapsed)
 
     model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+    model_file_name = "./data/model/1s/random_forest" + instances_dir.split("/")[-2] + ".pkl"
 
 
     with open(model_file_name, "wb") as fp:
@@ -241,6 +250,7 @@ def test_classify(instances_dir=None):
     # data_list = data_list[n_train:]
     # data_list = train_test_split(data_list, train_size=0.7, random_state=10, shuffle=True)
     if len(my_test_data)!=0:
+        print("have test")
         data_list = my_test_data
 
 
@@ -261,6 +271,7 @@ def test_classify(instances_dir=None):
     print("加载模型。。。")
     if my_test_model == None:
         model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+        model_file_name = "./data/model/1s/random_forest" + instances_dir.split("/")[-2] + ".pkl"
         with open(model_file_name, "rb") as fp:
             try:
                 predict_model = cPickle.load(fp)
@@ -360,12 +371,13 @@ if __name__ == '__main__':
 
     # train_and_predict()
     big_list = [0.05, 0.1, 0.2, 0.3]
-    # big_list = [0.1, 0.2, 0.3]
+    big_list = [0.1, 0.2, 0.3]
 
     for big_percent in big_list:
         print("processing b={}:".format(big_percent))
         data_name = "SB-F-202201051400"
         instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
+        instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/1s/" + str(big_percent) + "/")
         train_and_predict(instances_dir)
 
         data_name = "SB-F-202201021400"

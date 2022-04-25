@@ -16,9 +16,11 @@ def read_dat(rf):
     rf = './raw_data/MAWI/dat/SB-F-202201051400.dat'
     pre = './data/feature/timeWin/SB-F-202201051400/'
     wf = './data/feature/timeWin/SB-F-202201051400/origin/'
-    rf = './raw_data/MAWI/dat/SB-F-202201021400.dat'
-    pre = './data/feature/timeWin/SB-F-202201021400/'
-    wf = './data/feature/timeWin/SB-F-202201021400/origin/'
+    pre = './data/feature/1s/SB-F-202201051400/'
+    wf = './data/feature/1s/SB-F-202201051400/origin/'
+    # rf = './raw_data/MAWI/dat/SB-F-202201021400.dat'
+    # pre = './data/feature/timeWin/SB-F-202201021400/'
+    # wf = './data/feature/timeWin/SB-F-202201021400/origin/'
     # rf = './raw_data/MAWI/dat/SB-F-202201041400.dat'
     # pre = './data/feature/timeWin/SB-F-202201041400/'
     # wf = './data/feature/timeWin/SB-F-202201041400/origin/'
@@ -28,7 +30,8 @@ def read_dat(rf):
     # key_map.item = [key:[map_key,pkts]]
     # key_map.item = [key:[map_key, bytes, pkts]]
     key_map = {}
-    t = 5
+    T = 30
+    t = T
     # tmp_feature.item = [map_key:feature]
     tmp_feature = {}
     # [map_key, bytes, pkts]
@@ -48,7 +51,7 @@ def read_dat(rf):
 
             if p.time > t:
                 # if p.time > t or x > 20000:
-                t += 5
+                t += T
                 # 导出tmp_feature = {}
                 # wname = wf+ str(t/5) + '.pkl'
                 print('p.time:' + str(p.time))
@@ -56,14 +59,17 @@ def read_dat(rf):
                 for k, v in tmp_feature.items():
                     tmp_list.append([k, v])
                 features.append(tmp_list)
+                print(len(tmp_feature))
                 tmp_feature.clear()
-                if len(features)>=180:
+
+                if len(features) >= 300:
                     break
                 # break
 
             bin_trace = f.read(trace_byte_size)
+    return
 
-    if len(tmp_feature) != 0 and len(features)<180:
+    if len(tmp_feature) != 0 and len(features) < 300:
         print('p.time:' + str(p.time))
         tmp_list = []
         for k, v in tmp_feature.items():
@@ -85,8 +91,9 @@ def read_dat(rf):
     # w_map_list_name = pre + 'mapkey_to_key.pkl'
     # with open(w_map_list_name,'wb') as f:
     #     pickle.dump(save_map, f)
+    print(sorted_list[:100])
 
-    with open(w_list_name,'wb') as f:
+    with open(w_list_name, 'wb') as f:
         pickle.dump(sorted_list, f)
 
     print('len(features):' + str(len(features)))
@@ -112,8 +119,6 @@ def read_dat(rf):
                 kv.append(1)
             else:
                 kv.append(0)
-
-
 
     for i in range(len(features)):
         f_list = features[i]
@@ -206,7 +211,6 @@ def insert_p(p, tmp_feature, key_map, now_win):
         # last_feature.append(int(p.src_port))
         # last_feature.append(int(p.dst_port))
         tmp_feature[map_key] = last_feature
-
 
 
 if __name__ == '__main__':

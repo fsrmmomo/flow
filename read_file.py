@@ -15,22 +15,6 @@ import numpy as np
 from common_utils import load_json, save_pkl
 from path_utils import get_prj_root
 
-dirs = {
-    "video": "./tmp/dt/video",
-    "iot": "./tmp/dt/iot",
-    "voip": "./tmp/dt/voip"
-}
-# pkts_dirs = {
-#     "video": "./tmp/pkts/video",
-#     "iot": "./tmp/pkts/iot",
-#     "voip": "./tmp/pkts/voip"
-# }
-
-pkts_dirs = {
-    "video": "./even/pkts/video",
-    "iot": "./even/pkts/iot",
-    "voip": "./even/pkts/voip"
-}
 
 win_size = 10  # 窗口大小
 limit = 100000
@@ -38,19 +22,7 @@ limit = 100000
 Instance = namedtuple("Instance", ["features", "label", "id"])  # 实例
 
 
-def to_int(str):
-    """
-    str转int
-    """
-    try:
-        int(str)
-        return int(str)
-    except ValueError:  # 报类型错误，说明不是整型的
-        try:
-            float(str)  # 用这个来验证，是不是浮点字符串
-            return int(float(str))
-        except ValueError:  # 如果报错，说明即不是浮点，也不是int字符串。   是一个真正的字符串
-            return False
+
 
 
 def get_filename(path):
@@ -84,6 +56,7 @@ def get_filename(path):
 def read_pkl_to_instance(filename,big_dict):
     # print(filename)
     feature_list = []
+
     with open(filename, 'rb') as f:
         f_list = pickle.load(f)
         # print(f_list[:10])
@@ -144,6 +117,19 @@ def read_pkl_to_instance(filename,big_dict):
             #     print(feature)
     return feature_list
 
+def gen_label_file(filename,big_dict):
+    label_list = []
+    with open(filename, 'rb') as f:
+        f_list = pickle.load(f)
+        for f in f_list:
+            if f[0] in big_dict.keys():
+                label_list.append(1)
+                # print("big")
+            else:
+                label_list.append(0)
+
+    return label_list
+
 
 def read_pkl():
     wf = './data/feature/timeWin/SB-F-202201051400/0.05/'
@@ -194,6 +180,8 @@ def generate_instance_pkl_by_feature_pkl(big_percent,data_name):
 
     fn_head = "./data/feature/timeWin/" + data_name +"/"
     instances_head = "./data/instances/" + data_name + "/"
+    # fn_head = "./data/feature/1s/" + data_name +"/"
+    # instances_head = "./data/instances/" + data_name + "/1s/"
 
     # pkl_dir = fn_head + str(big_percent) + '/'
     # pkl_dir = fn_head + '0.05/'
@@ -237,6 +225,8 @@ def generate_instance_pkl_by_feature_pkl(big_percent,data_name):
     files = os.listdir(pkl_dir)
     files.sort(key = lambda x:(len(x),x))
     # print(files)
+    label_list = []
+    save_pkl_file = []
     for file in files:
         if file[-3:] == "pkl":
 
@@ -248,116 +238,21 @@ def generate_instance_pkl_by_feature_pkl(big_percent,data_name):
             fname = pkl_dir + file
             # print("load pkl:" + fname)
             instances = read_pkl_to_instance(filename=fname,big_dict=big_dict)
+            save_pkl_file.append(instances)
+
+
+            label_list = label_list + gen_label_file(filename=fname,big_dict=big_dict)
+
             print("{} 流的数量：{}".format(fname, len(instances)))
-
-            save_file = "instance_" + file
-            save_pkl(os.path.join(instances_dir, save_file), instances)
-
-
-# def change_label
-
-def generate_instances_pkl():
-    """
-    调用 read_pkts_generate_instances 读取每个pkts文件 生成instance 然后保存成pkl
-    :return:
-    """
-    instances_dir = os.path.join(get_prj_root(), "./even/instances")  # 修改：instances_dir实例的路径
-    for flow_type, dirname in pkts_dirs.items():
-        instances = []
-        pkts_list = glob.glob(dirname + "/*.pkts")  # 获取每个pkts文件
-        print("parsing {} catalogue".format(dirname))
-        print("{} pkts数量：{}".format(dirname, len(pkts_list)))
-        for pkts in pkts_list:
-            # instances = instances + read_pkts_generate_instances(filename=pkts, label=generate_label(flow_type))
-            instances = instances + read_pkl_to_instance(filename=pkts)
-            print("flow {} finished".format(pkts))
-        print("{} 流的数量：{}".format(dirname, len(instances)))
-        print(instances)
-        save_pkl(os.path.join(instances_dir, "{}.pkl".format(flow_type)), instances)  # 保存Python内存数据到文件
+    print(len(save_pkl_file))
+    save_file = "instances.pkl"
+    save_pkl(os.path.join(instances_dir, save_file), save_pkl_file)
 
 
-def generate_label(flow_type):
-    """
-    将video iot voip 分别改为0 1 2
-    :param flow_type:
-    :return:
-    """
-    if flow_type == 'video':
-        return 0
-    if flow_type == 'iot':
-        return 1
-    if flow_type == 'voip':
-        return 2
+    print(len(label_list))
+    save_lable_file = "label" + str(big_percent)
+    save_pkl(os.path.join(instances_head, save_lable_file), label_list)
 
-
-def calc_data_list(path):
-    """
-    读取文件夹中的文件计算特征值然后生成 multithread_client中的data_list文件
-    用于测试识别的准确度
-    """
-    data_list = []
-    # 找到文件名
-    filename_list = get_filename(path)
-
-    # 计算每个pkts文件的特征值
-    for name in filename_list:
-        temp_list = read_pkts(name)
-        if len(temp_list) == 0:
-            continue
-        # temp_list[1][0] = name + temp_list[1][0] # 把文件名作为五元组
-        if temp_list not in data_list:
-            data_list.append(temp_list)
-
-    """
-    # 给data_list添加其他命令
-    data_list.append("hhhh")
-    data_list.append("exit")
-    data_list.append("send")
-    data_list.append("send")
-    """
-
-    # 将data_list保存为本地txt
-    path = path + 'data_list.txt'
-    with open(path, 'w') as f:
-        f.write(str(data_list))
-        f.close
-    print(path, "文件解析成功！")
-
-    return data_list
-
-
-def get_median(data):  # 产生中位数
-    data.sort()
-    half = len(data) // 2
-    return (data[half] + data[~half]) / 2
-
-
-
-
-def deal(path, wait_saving_list):
-    """
-    将二维的list存储到xls中
-    :return: null
-    """
-    # list转dataframe
-    df = pd.DataFrame(wait_saving_list, columns=['包大小-最小值', '包大小-最大值', '包大小-平均值', '包大小-方差', '包大小-中位数'
-        , '包间隔-最小值', '包间隔-最大值', '包间隔-平均值', '包间隔-方差', '包间隔-中位数', '标签'])
-
-    # 保存到本地excel
-    path = path + 'feature.xlsx'
-    df.to_excel(path, index=False)
-
-
-def write_xls(path, wait_saving_lsit):
-    path = path + 'feature.xls'
-    output = open(path, 'w', encoding='gbk')
-    output.write('包大小-最小值\t包大小-最大值\t包大小-平均值\t包大小-方差\t包大小-中位数\t包间隔-最小值\t包间隔-最大值\t包间隔-平均值\t包间隔-方差\t包间隔-中位数\t标签\n')
-    for i in range(len(wait_saving_lsit)):
-        for j in range(len(wait_saving_lsit[i])):
-            output.write(str(wait_saving_lsit[i][j]))  # write函数不能写int类型的参数，所以使用str()转化
-            output.write('\t')  # 相当于Tab一下，换一个单元格
-        output.write('\n')  # 写完一行立马换行
-    output.close()
 
 
 if __name__ == "__main__":
@@ -371,8 +266,9 @@ if __name__ == "__main__":
     # generate_instances_pkl()
     # read_pkl()
     big_list = [0.05, 0.1, 0.2, 0.3]
+    # big_list = [0.05]
     data_name = ["SB-F-202201051400","SB-F-202201041400","SB-F-202201021400"]
-    for d in data_name:
+    for d in data_name[:1]:
         for b in big_list:
             print("processing d={0} b={1}:".format(d,b))
             generate_instance_pkl_by_feature_pkl(b,d)
