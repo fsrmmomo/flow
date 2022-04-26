@@ -114,6 +114,7 @@ def train_and_predict(instances_dir):
 
     model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
     model_file_name = "./data/model/1s/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+    model_file_name = "./data/model/0.5s/random_forest" + instances_dir.split("/")[-2] + ".pkl"
 
 
     with open(model_file_name, "wb") as fp:
@@ -272,6 +273,7 @@ def test_classify(instances_dir=None):
     if my_test_model == None:
         model_file_name = "./data/model/random_forest" + instances_dir.split("/")[-2] + ".pkl"
         model_file_name = "./data/model/1s/random_forest" + instances_dir.split("/")[-2] + ".pkl"
+        model_file_name = "./data/model/0.5s/random_forest" + instances_dir.split("/")[-2] + ".pkl"
         with open(model_file_name, "rb") as fp:
             try:
                 predict_model = cPickle.load(fp)
@@ -371,13 +373,14 @@ if __name__ == '__main__':
 
     # train_and_predict()
     big_list = [0.05, 0.1, 0.2, 0.3]
-    big_list = [0.1, 0.2, 0.3]
+    # big_list = [0.1, 0.2, 0.3]
 
-    for big_percent in big_list:
+    for big_percent in big_list[:1]:
         print("processing b={}:".format(big_percent))
         data_name = "SB-F-202201051400"
         instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/" + str(big_percent) + "/")
         instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/1s/" + str(big_percent) + "/")
+        instances_dir = os.path.join(get_prj_root(), "./data/instances/" + data_name + "/0.5s/" + str(big_percent) + "/")
         train_and_predict(instances_dir)
 
         data_name = "SB-F-202201021400"

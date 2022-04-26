@@ -180,8 +180,10 @@ def generate_instance_pkl_by_feature_pkl(big_percent,data_name):
 
     fn_head = "./data/feature/timeWin/" + data_name +"/"
     instances_head = "./data/instances/" + data_name + "/"
-    # fn_head = "./data/feature/1s/" + data_name +"/"
-    # instances_head = "./data/instances/" + data_name + "/1s/"
+    fn_head = "./data/feature/1s/" + data_name +"/"
+    instances_head = "./data/instances/" + data_name + "/1s/"
+    fn_head = "./data/feature/0.5s/" + data_name +"/"
+    instances_head = "./data/instances/" + data_name + "/0.5s/"
 
     # pkl_dir = fn_head + str(big_percent) + '/'
     # pkl_dir = fn_head + '0.05/'
