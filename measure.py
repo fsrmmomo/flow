@@ -17,21 +17,61 @@ def analyze(all_result, big_sketch, mixed_sketch, measured_big_set):
     true_sum = 0
     m_sum = 0
     ARE = 0
+
+    big_ARE = 0
+    s_ARE = 0
+    big_m = 0
+    s_m = 0
+    big_t = 0
+    s_t = 0
+    big_err = 0
+    s_err = 0
+
     for k, v in all_result.items():
         true = v
         meas = 0
         if k in measured_big_set:
             meas = big_sketch.query(k) + mixed_sketch.query(k)
+            big_ARE += abs(meas - true) / true
+            big_err += abs(meas - true)
+            big_m += meas
+            big_t += true
         else:
+
             meas = mixed_sketch.query(k)
+            # if true>meas:
+            #     print(all_result[k])
+            #     print(true)
+            #     print(meas)
+            #     print("ooooooo")
+            s_ARE += abs(meas - true) / true
+            s_err += abs(meas - true)
+            s_m += meas
+            s_t += true
         true_sum += true
         m_sum += meas
         ARE += abs(meas - true) / true
+    if type(big_sketch) == heavy:
+        size = big_sketch.d * big_sketch.w
+        emp = 0
+        for arr in big_sketch.arrays:
+            for x in arr:
+                if len(x) == 0:
+                    emp += 1
+        print("空闲率:{:.4f}".format(emp / size), end="  ")
     print("流数目:{:1}".format(len(all_result)), end="  ")
+    print("大流数目:{:1}".format(len(measured_big_set)), end="  ")
     print("真实结果：" + str(true_sum), end="  ")
     print("测量结果：" + str(m_sum), end="  ")
     print("准确率为：{:.4f}".format((1 - abs(m_sum - true_sum) / true_sum)), end="  ")
-    print("ARE：{:.4f}".format(abs(ARE / len(all_result))))
+
+    print("大流错误为：{:1}".format(big_t- big_m), end="  ")
+    print("小流错误为：{:1}".format(s_t - s_m), end="  ")
+    print("大流错误1为：{:1}".format(big_err), end="  ")
+    print("小流错误1为：{:1}".format(s_err), end="  ")
+    print("ARE：{:.4f}".format(abs(ARE / len(all_result))), end="  ")
+    print("big_ARE：{:.4f}".format(abs(big_ARE / len(all_result))), end="  ")
+    print("s_ARE：{:.4f}".format(abs(s_ARE / len(all_result))))
 
     return [(1 - abs(m_sum - true_sum) / true_sum), abs(ARE / len(all_result))]
 
@@ -40,21 +80,49 @@ def analyze3(all_result, big_sketch, mixed_sketch, measured_big_set):
     true_sum = 0
     m_sum = 0
     ARE = 0
+    big_ARE = 0
+    s_ARE = 0
+    big_m = 0
+    s_m = 0
+    big_t = 0
+    s_t = 0
+
     for k, v in all_result.items():
         true = v
         meas = 0
         if k in measured_big_set:
             meas = big_sketch.query(k)
+            big_ARE += abs(meas - true) / true
+            big_m += meas
+            big_t += true
         else:
             meas = mixed_sketch.query(k)
+            s_ARE += abs(meas - true) / true
+            s_m += meas
+            s_t += true
+
         true_sum += true
         m_sum += meas
         ARE += abs(meas - true) / true
+    if type(big_sketch) == heavy:
+        size = big_sketch.d * big_sketch.w
+        emp = 0
+        for arr in big_sketch.arrays:
+            for x in arr:
+                if len(x) == 0:
+                    emp += 1
+        print("空闲率:{:.4f}".format(emp / size), end="  ")
     print("流数目:{:1}".format(len(all_result)), end="  ")
+    print("大流数目:{:1}".format(len(measured_big_set)), end="  ")
     print("真实结果：" + str(true_sum), end="  ")
     print("测量结果：" + str(m_sum), end="  ")
     print("准确率为：{:.4f}".format((1 - abs(m_sum - true_sum) / true_sum)), end="  ")
-    print("ARE：{:.4f}".format(abs(ARE / len(all_result))))
+
+    print("大流错误为：{:1}".format(big_t- big_m), end="  ")
+    print("小流错误为：{:1}".format(s_t - s_m), end="  ")
+    print("ARE：{:.4f}".format(abs(ARE / len(all_result))), end="  ")
+    print("big_ARE：{:.4f}".format(abs(big_ARE / len(all_result))), end="  ")
+    print("s_ARE：{:.4f}".format(abs(s_ARE / len(all_result))))
     return [(1 - abs(m_sum - true_sum) / true_sum), abs(ARE / len(all_result))]
 
 
@@ -79,8 +147,18 @@ def analyze2(all_result, mixed_sketch):
 
 
 def sketch_measure(mode=0, T=5, total_mem=1000 * 1024):
-    new_dat_dir = './data/dat/SB-F-202201051400/1/'
-    N = T * 10
+    new_dat_dir = './data/dat/SB-F-202201051400/0.5/'
+    TT = 0.5
+    if TT == 0.5:
+        xx = 2
+        new_dat_dir = './data/dat/SB-F-202201051400/0.5/'
+    else:
+        xx = 1
+        new_dat_dir = './data/dat/SB-F-202201051400/1/'
+    # N = T * 10
+    # print(xx)
+    N = T * 10 * xx
+    # N = T * 10
     if mode == 0:
         mixed_sketch = sketch(total_mem, 3, 2)
     else:
@@ -119,7 +197,8 @@ def sketch_measure(mode=0, T=5, total_mem=1000 * 1024):
                 bin_trace = f.read(trace_byte_size)
 
         # if (i+1) % T == 0 and i != 0:
-        if (i + 1) % T == 0:
+        # if (i + 1) % T == 0:
+        if (i + 1) % (xx * T) == 0:
             print("data-" + str(cc), end='  ')
             cc += 1
             res.append(analyze2(all_result, mixed_sketch))
@@ -137,15 +216,26 @@ def sketch_measure(mode=0, T=5, total_mem=1000 * 1024):
     return res
 
 
-def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.4):
-    big = 2
+def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.22):
+    big = 4
     small = 1
     print("big = " + str(big), end=' ')
     print("small = " + str(small), end=' ')
     print(big_percent, end=' ')
     print(fraction)
-    new_dat_dir = './data/dat/SB-F-202201051400/1/'
-    N = T * 10
+    # new_dat_dir = './data/dat/SB-F-202201051400/1/'
+    # new_dat_dir = './data/dat/SB-F-202201051400/0.5/'
+    TT = 0.5
+    if TT == 0.5:
+        xx = 2
+        new_dat_dir = './data/dat/SB-F-202201051400/0.5/'
+    else:
+        xx = 1
+        new_dat_dir = './data/dat/SB-F-202201051400/1/'
+    # N = T * 10
+    # print(xx)
+    N = T * 10 * xx
+    # N = T * 10
     count_f = './data/dat/SB-F-202201051400/count.pkl'
     trace_byte_size = 15
     sorted_list = []
@@ -155,11 +245,15 @@ def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.4):
     big_set = set()
     all_result = dict()
     # sorted_list.sort(reverse=True, key=lambda x: x[2])
+    big_dict = {}
 
     for flow in sorted_list[:int(len(sorted_list) * big_percent)]:
         big_set.add(flow[0])
+    # for flow in sorted_list:
+    #     big_dict[flow[0]] = flow[2]
 
     big_sketch = sketch(int(total_mem * fraction), 3, big)
+    big_sketch = heavy(int(total_mem * fraction), 5)
     if mode == 0:
         mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, small)
     else:
@@ -188,8 +282,12 @@ def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.4):
                         all_result[p.src_ip] = 1
 
                     if p.src_ip in big_set:
-                        big_sketch.insert(p.src_ip, 1)
+                        # big_sketch.insert(p.src_ip, 1)
+                        if not big_sketch.insert(p.src_ip, 1):
+                            mixed_sketch.insert(p.src_ip, 1)
                     else:
+                        # if all_result[p.src_ip]>7:
+                        #     print("wrong")
                         mixed_sketch.insert(p.src_ip, 1)
                 else:
                     if p.src_ip in all_result.keys():
@@ -203,7 +301,8 @@ def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.4):
                         mixed_sketch.insert(p.src_ip, p.payload)
                 bin_trace = f.read(trace_byte_size)
 
-        if (i + 1) % T == 0:
+        # if (i + 1) % T == 0:
+        if (i + 1) % (xx * T) == 0:
             # print(sorted_list[:100])
             # print(len(sorted_list))
             # for l in sorted_list[:10000]:
@@ -229,8 +328,8 @@ def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.4):
     return res
 
 
-def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.15):
-    big = 2
+def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.1):
+    big = 4
     small = 1
     print("big = " + str(big), end=' ')
     print("small = " + str(small), end=' ')
@@ -257,17 +356,26 @@ def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.15):
 
     big_set = set()
     all_result = dict()
-    sorted_list.sort(reverse=True, key=lambda x: x[2])
-    for flow in sorted_list[:int(len(sorted_list) * big_percent)]:
-        big_set.add(flow[0])
+    # sorted_list.sort(reverse=True, key=lambda x: x[2])
+    # for flow in sorted_list[:int(len(sorted_list) * big_percent)]:
+    #     big_set.add(flow[0])
     # print(sorted_list[:int(len(sorted_list) * big_percent)][-100:])
     # return
+
+    big_dict = {}
+
+    for flow in sorted_list[:int(len(sorted_list) * big_percent)]:
+        big_set.add(flow[0])
+    # for flow in sorted_list:
+    #     big_dict[flow[0]] = flow[2]
 
     # total_mem = 2000 * 1024
     # fraction = 0.05
     big_sketch = sketch(int(total_mem * fraction), 3, big)
+    big_sketch = heavy(int(total_mem * fraction), 5)
     if mode == 0:
         mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, small)
+        # mixed_sketch = sketch(int(total_mem * 0.8), 3, small)
     else:
         mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, 4)
 
@@ -298,7 +406,12 @@ def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.15):
                         all_result[p.src_ip] = 1
 
                     if p.src_ip in measured_big_set:
-                        big_sketch.insert(p.src_ip, 1)
+
+                        # big_sketch.insert(p.src_ip, 1)
+                        if not big_sketch.insert(p.src_ip, 1):
+                            # print("failed")
+                            mixed_sketch.insert(p.src_ip, 1)
+
                     else:
                         mixed_sketch.insert(p.src_ip, 1)
                 else:
@@ -316,6 +429,9 @@ def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.15):
                 if p.src_ip in big_set:
                     # print("in")
                     tmp_big_set.add(p.src_ip)
+                # else:
+                #     if all_result[p.src_ip]>7:
+                #         print("wrong")
 
                 bin_trace = f.read(trace_byte_size)
 
@@ -380,6 +496,42 @@ class sketch:
 
     def clear(self):
         self.arrays = [[0 for _ in range(self.w)] for _ in range(self.d)]
+
+
+class heavy:
+    def __init__(self, size, d=2):
+        self.w = size // d // 8
+        self.arrays = [[[] for _ in range(self.w)] for _ in range(d)]
+        self.seeds = [(i + 1) * 900 for i in range(d)]
+        self.d = d
+
+    def insert(self, key, value):
+        for i, s in enumerate(self.seeds):
+            x = mmh.hash(key.to_bytes(4, 'big'), seed=s)
+            y = x % self.w
+            table = self.arrays[i]
+            if len(table[y]) == 0:
+                table[y].append(key)
+                table[y].append(value)
+                return True
+            elif table[y][0] == key:
+                table[y][1] += value
+                return True
+        return False
+
+    def query(self, key):
+        for i, s in enumerate(self.seeds):
+            x = mmh.hash(key.to_bytes(4, 'big'), seed=s)
+            y = x % self.w
+            table = self.arrays[i]
+            if len(table[y]) == 0:
+                return 0
+            elif table[y][0] == key:
+                return table[y][1]
+        return 0
+
+    def clear(self):
+        self.arrays = [[[] for _ in range(self.w)] for _ in range(self.d)]
 
 
 def get_sorted():
@@ -574,7 +726,7 @@ if __name__ == '__main__':
     # wf = "./result/result.pkl"
     # for ty in types[2:]:
     #     ty = 'opt'
-    for ty in types[1:2]:
+    for ty in types[1:3]:
 
         print(ty)
         wf = "./result/" + ty + "_result.pkl"
