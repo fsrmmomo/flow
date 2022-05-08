@@ -10,7 +10,8 @@ import pickle
 import hashlib
 import murmurhash as mmh
 
-big_percent = 0.05
+# big_percent = 0.01
+big_percent = 0.1
 
 
 def analyze(all_result, big_sketch, mixed_sketch, measured_big_set):
@@ -27,11 +28,18 @@ def analyze(all_result, big_sketch, mixed_sketch, measured_big_set):
     big_err = 0
     s_err = 0
 
+    count_miss = 0
+
     for k, v in all_result.items():
         true = v
         meas = 0
         if k in measured_big_set:
-            meas = big_sketch.query(k) + mixed_sketch.query(k)
+            # meas = big_sketch.query(k) + mixed_sketch.query(k)
+            b = big_sketch.query(k)
+            s = mixed_sketch.query(k)
+            meas = b + s
+            if b==0:
+                count_miss += 1
             big_ARE += abs(meas - true) / true
             big_err += abs(meas - true)
             big_m += meas
@@ -61,19 +69,23 @@ def analyze(all_result, big_sketch, mixed_sketch, measured_big_set):
         print("空闲率:{:.4f}".format(emp / size), end="  ")
     print("流数目:{:1}".format(len(all_result)), end="  ")
     print("大流数目:{:1}".format(len(measured_big_set)), end="  ")
+
+    print("大流数目miss:{:1}".format(count_miss), end="  ")
     print("真实结果：" + str(true_sum), end="  ")
     print("测量结果：" + str(m_sum), end="  ")
     print("准确率为：{:.4f}".format((1 - abs(m_sum - true_sum) / true_sum)), end="  ")
 
-    print("大流错误为：{:1}".format(big_t- big_m), end="  ")
+    print("ARE：{:.4f}".format(abs(ARE / len(all_result))), end="  ")
+    print("big_ARE：{:.4f}".format(abs(big_ARE / len(all_result))), end="  ")
+    print("s_ARE：{:.4f}".format(abs(s_ARE / len(all_result))), end="  ")
+    print("大流错误为：{:1}".format(big_t - big_m), end="  ")
     print("小流错误为：{:1}".format(s_t - s_m), end="  ")
     print("大流错误1为：{:1}".format(big_err), end="  ")
     print("小流错误1为：{:1}".format(s_err), end="  ")
-    print("ARE：{:.4f}".format(abs(ARE / len(all_result))), end="  ")
-    print("big_ARE：{:.4f}".format(abs(big_ARE / len(all_result))), end="  ")
-    print("s_ARE：{:.4f}".format(abs(s_ARE / len(all_result))))
+    print("绝对误差为：{:.4f}".format((abs(big_err + s_err) / true_sum)))
 
-    return [(1 - abs(m_sum - true_sum) / true_sum), abs(ARE / len(all_result))]
+
+    return [(1 - abs(m_sum - true_sum) / true_sum), abs(ARE / len(all_result)), abs(big_err + s_err) / true_sum]
 
 
 def analyze3(all_result, big_sketch, mixed_sketch, measured_big_set):
@@ -87,23 +99,49 @@ def analyze3(all_result, big_sketch, mixed_sketch, measured_big_set):
     big_t = 0
     s_t = 0
 
+    big_err = 0
+    s_err = 0
+
+    count_big = 0
+
+    count_miss = 0
+
     for k, v in all_result.items():
         true = v
         meas = 0
         if k in measured_big_set:
-            meas = big_sketch.query(k)
+            # meas = big_sketch.query(k)
+            b = big_sketch.query(k)
+
+            s = mixed_sketch.query(k)
+            # meas = b
+            if b==0:
+                count_miss += 1
+                meas = s
+            else:
+                meas = b
             big_ARE += abs(meas - true) / true
             big_m += meas
             big_t += true
+
+            big_err += abs(meas - true)
+
+            count_big += 1
+
         else:
             meas = mixed_sketch.query(k)
             s_ARE += abs(meas - true) / true
             s_m += meas
             s_t += true
+            s_err += abs(meas - true)
 
         true_sum += true
         m_sum += meas
         ARE += abs(meas - true) / true
+    # print(big_m)
+    # print(big_t)
+    # print(s_t)
+    # print(s_m)
     if type(big_sketch) == heavy:
         size = big_sketch.d * big_sketch.w
         emp = 0
@@ -112,18 +150,27 @@ def analyze3(all_result, big_sketch, mixed_sketch, measured_big_set):
                 if len(x) == 0:
                     emp += 1
         print("空闲率:{:.4f}".format(emp / size), end="  ")
+
     print("流数目:{:1}".format(len(all_result)), end="  ")
-    print("大流数目:{:1}".format(len(measured_big_set)), end="  ")
+    # print("大流数目:{:1}".format(len(measured_big_set)), end="  ")
+    print("大流数目:{:1}".format(count_big), end="  ")
+    print("大流数目miss:{:1}".format(count_miss), end="  ")
     print("真实结果：" + str(true_sum), end="  ")
     print("测量结果：" + str(m_sum), end="  ")
     print("准确率为：{:.4f}".format((1 - abs(m_sum - true_sum) / true_sum)), end="  ")
 
-    print("大流错误为：{:1}".format(big_t- big_m), end="  ")
-    print("小流错误为：{:1}".format(s_t - s_m), end="  ")
+
     print("ARE：{:.4f}".format(abs(ARE / len(all_result))), end="  ")
     print("big_ARE：{:.4f}".format(abs(big_ARE / len(all_result))), end="  ")
-    print("s_ARE：{:.4f}".format(abs(s_ARE / len(all_result))))
-    return [(1 - abs(m_sum - true_sum) / true_sum), abs(ARE / len(all_result))]
+    print("s_ARE：{:.4f}".format(abs(s_ARE / len(all_result))), end="  ")
+    print("大流错误为：{:1}".format(big_t - big_m), end="  ")
+    print("小流错误为：{:1}".format(s_t - s_m), end="  ")
+    print("大流错误1为：{:1}".format(big_err), end="  ")
+    print("小流错误1为：{:1}".format(s_err), end="  ")
+    print("绝对误差为：{:.4f}".format((abs(big_err + s_err) / true_sum)))
+
+
+    return [(1 - abs(m_sum - true_sum) / true_sum), abs(ARE / len(all_result)),abs(big_err + s_err) / true_sum]
 
 
 def analyze2(all_result, mixed_sketch):
@@ -216,9 +263,9 @@ def sketch_measure(mode=0, T=5, total_mem=1000 * 1024):
     return res
 
 
-def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.22):
+def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.22,hd = 8):
     big = 4
-    small = 1
+    small = 2
     print("big = " + str(big), end=' ')
     print("small = " + str(small), end=' ')
     print(big_percent, end=' ')
@@ -253,7 +300,7 @@ def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.22):
     #     big_dict[flow[0]] = flow[2]
 
     big_sketch = sketch(int(total_mem * fraction), 3, big)
-    big_sketch = heavy(int(total_mem * fraction), 5)
+    big_sketch = heavy(int(total_mem * fraction), hd)
     if mode == 0:
         mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, small)
     else:
@@ -325,10 +372,251 @@ def opt_measure(mode=0, T=5, total_mem=1000 * 1024, fraction=0.22):
     prec.sort()
     prec = prec[1:-1]
     print("{:.4f}".format(mean(prec)))
+    prec = [x[2] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+    return res
+
+def load_es_data_opt(mode=0, T=5, total_mem=600 * 1024, fraction=0.1 , hd = 4):
+    dat_dir = "./data/dat/offlineTraceData/"
+
+    big = 4
+    small = 1
+    # hd = 8
+    print("big = " + str(big), end=' ')
+    print("small = " + str(small), end=' ')
+    print("d = " + str(hd), end=' ')
+    print(big_percent, end=' ')
+    print(fraction)
+
+    trace_byte_size = 15
+    res = []
+
+    for i in range(5):
+
+        r_name = dat_dir + str(i) + '.dat'
+
+        all_count = {}
+        sorted_list = []
+        big_set = set()
+        big_dict = {}
+        # with open(r_name, 'rb') as f:
+        #     bin_trace = f.read(trace_byte_size)
+        #     while bin_trace:
+        #         p = dat_trace()
+        #         p.init_from_binary(bin_trace)
+        #         if p.src_ip in all_count.keys():
+        #
+        #             all_count[p.src_ip] += 1
+        #         else:
+        #             all_count[p.src_ip] = 1
+        #         bin_trace = f.read(trace_byte_size)
+        #
+        # for k, v in all_count.items():
+        #     sorted_list.append([k, v])
+        # sorted_list.sort(reverse=True, key=lambda x: x[1])
+
+        with open(dat_dir + str(i) + '.cnt', 'rb') as f:
+            # pickle.dump(sorted_list,f)
+            y, sorted_list = pickle.load(f)
+        for flow in sorted_list[:int(len(sorted_list) * big_percent)]:
+            big_set.add(flow[0])
+
+        big_sketch = heavy(int(total_mem * fraction), hd)
+        mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, small)
+
+        measured_big_set = set()
+        tmp_big_set = set()
+        all_result = dict()
+        x = 0
+        with open(r_name, 'rb') as f:
+            bin_trace = f.read(trace_byte_size)
+            while bin_trace:
+                x += 1
+                p = dat_trace()
+                p.init_from_binary(bin_trace)
+
+                if mode == 0:
+                    if p.src_ip in all_result.keys():
+                        all_result[p.src_ip] += 1
+                    else:
+                        all_result[p.src_ip] = 1
+
+                    if p.src_ip in big_set:
+                        # big_sketch.insert(p.src_ip, 1)
+                        if not big_sketch.insert(p.src_ip, 1):
+                            mixed_sketch.insert(p.src_ip, 1)
+                    else:
+                        # if all_result[p.src_ip]>7:
+                        #     print("wrong")
+                        mixed_sketch.insert(p.src_ip, 1)
+                else:
+                    if p.src_ip in all_result.keys():
+                        all_result[p.src_ip] += p.payload
+                    else:
+                        all_result[p.src_ip] = p.payload
+
+                    if p.src_ip in big_set:
+                        big_sketch.insert(p.src_ip, p.payload)
+                    else:
+                        mixed_sketch.insert(p.src_ip, p.payload)
+                bin_trace = f.read(trace_byte_size)
+
+
+            print("data-" + str(i), end='  ')
+            # cc += 1
+            # print(len(measured_big_set), end='  ')
+            res.append(analyze3(all_result, big_sketch, mixed_sketch, big_set))
+            all_result.clear()
+            tmp_big_set.clear()
+            measured_big_set.clear()
+            big_sketch.clear()
+            mixed_sketch.clear()
+    prec = [x[0] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+
+    prec = [x[1] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+    prec = [x[2] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+    return res
+
+def load_es_data(mode=0, T=5, total_mem=600 * 1024, fraction=0.3, hd = 4):
+    dat_dir = "./data/dat/offlineTraceData/"
+
+    big = 4
+    small = 1
+    print("big = " + str(big), end=' ')
+    print("small = " + str(small), end=' ')
+    print("d = " + str(hd), end=' ')
+    print(big_percent, end=' ')
+    print(fraction)
+
+    trace_byte_size = 15
+    res = []
+
+    for i in range(5):
+        # print(i)
+
+        r_name = dat_dir + str(i) + '.dat'
+
+        all_count = {}
+        sorted_list = []
+        big_set = set()
+        big_dict = {}
+        y = 0
+        # with open(r_name, 'rb') as f:
+        #     bin_trace = f.read(trace_byte_size)
+        #     while bin_trace:
+        #         y += 1
+        #         p = dat_trace()
+        #         p.init_from_binary(bin_trace)
+        #         if p.src_ip in all_count.keys():
+        #
+        #             all_count[p.src_ip] += 1
+        #         else:
+        #             all_count[p.src_ip] = 1
+        #         bin_trace = f.read(trace_byte_size)
+        #
+        # for k, v in all_count.items():
+        #     sorted_list.append([k, v])
+        # sorted_list.sort(reverse=True, key=lambda x: x[1])
+        # with open(dat_dir + str(i) + '.cnt','wb') as f:
+        #     pickle.dump([y,sorted_list],f)
+        with open(dat_dir + str(i) + '.cnt','rb') as f:
+            # pickle.dump(sorted_list,f)
+            y,sorted_list = pickle.load(f)
+
+        # continue
+        for flow in sorted_list[:int(len(sorted_list) * big_percent)]:
+            big_set.add(flow[0])
+        # print(sorted_list[:10])
+
+        # print(sorted_list[:int(len(sorted_list) * big_percent)][-10:])
+        big_sketch = heavy(int(total_mem * fraction), hd)
+        mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, small)
+
+        measured_big_set = set()
+        tmp_big_set = set()
+        all_result = dict()
+        x = 0
+        with open(r_name, 'rb') as f:
+            bin_trace = f.read(trace_byte_size)
+            while bin_trace:
+                x += 1
+                p = dat_trace()
+                p.init_from_binary(bin_trace)
+
+                if mode == 0:
+                    if p.src_ip in all_result.keys():
+                        all_result[p.src_ip] += 1
+                    else:
+                        all_result[p.src_ip] = 1
+
+                    if p.src_ip in measured_big_set:
+
+                        # big_sketch.insert(p.src_ip, 1)
+                        if not big_sketch.insert(p.src_ip, 1):
+                            # print("failed")
+                            mixed_sketch.insert(p.src_ip, 1)
+
+                    else:
+                        mixed_sketch.insert(p.src_ip, 1)
+                else:
+                    if p.src_ip in all_result.keys():
+                        all_result[p.src_ip] += p.payload
+                    else:
+                        all_result[p.src_ip] = p.payload
+
+                    if p.src_ip in measured_big_set:
+                        big_sketch.insert(p.src_ip, p.payload)
+                    else:
+                        mixed_sketch.insert(p.src_ip, p.payload)
+                if p.src_ip in big_set:
+                    tmp_big_set.add(p.src_ip)
+
+                bin_trace = f.read(trace_byte_size)
+
+                if x in [int(0.1 * x * y) for x in range(1, 11)]:
+                    # print(x)
+                    measured_big_set = measured_big_set | tmp_big_set
+                    tmp_big_set.clear()
+
+            # print(x)
+            print("data-" + str(i), end='  ')
+            # cc += 1
+            print(len(measured_big_set), end='  ')
+            res.append(analyze(all_result, big_sketch, mixed_sketch, measured_big_set))
+            all_result.clear()
+            tmp_big_set.clear()
+            measured_big_set.clear()
+            big_sketch.clear()
+            mixed_sketch.clear()
+    prec = [x[0] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+
+    prec = [x[1] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+
+    prec = [x[2] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
     return res
 
 
-def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.1):
+def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.1,hd = 8):
     big = 4
     small = 1
     print("big = " + str(big), end=' ')
@@ -372,7 +660,7 @@ def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.1):
     # total_mem = 2000 * 1024
     # fraction = 0.05
     big_sketch = sketch(int(total_mem * fraction), 3, big)
-    big_sketch = heavy(int(total_mem * fraction), 5)
+    big_sketch = heavy(int(total_mem * fraction), hd)
     if mode == 0:
         mixed_sketch = sketch(int(total_mem * (1 - fraction)), 3, small)
         # mixed_sketch = sketch(int(total_mem * 0.8), 3, small)
@@ -464,6 +752,10 @@ def measure_file(mode=0, T=5, total_mem=1000 * 1024, fraction=0.1):
     prec = [x[1] for x in res]
     prec.sort()
     prec = prec[1:-1]
+    print("{:.4f}".format(mean(prec)))
+    prec = [x[2] for x in res]
+    prec.sort()
+    # prec = prec[1:-1]
     print("{:.4f}".format(mean(prec)))
     return res
 
@@ -726,24 +1018,36 @@ if __name__ == '__main__':
     # wf = "./result/result.pkl"
     # for ty in types[2:]:
     #     ty = 'opt'
-    for ty in types[1:3]:
+    for f in [0.15]:
+        # print("esopt")
+        # load_es_data_opt(fraction=f)
+        print("estest")
+        load_es_data(fraction=f)
+    # load_es_data()
+    # return
+    # for f in [0.3 ,0.2,0.1]:
+    # for f in [0.05]:
+    #     print("opt")
+    #     # opt_measure(fraction=f)
+    #     print("test")
+    #     measure_file(fraction=f)
 
-        print(ty)
-        wf = "./result/" + ty + "_result.pkl"
-        result_list = {}
-        for t in times:
-            print(t)
-            res = {}
-            for m in mems:
-                print(m)
-                if ty == "sketch":
-                    ans = sketch_measure(0, t, m)
-                elif ty == "opt":
-                    ans = opt_measure(0, t, m)
-                else:
-                    ans = measure_file(0, t, m)
-                res[m] = ans
-            result_list[t] = res
+    # for ty in types[1:3]:
+    #
+    #     print(ty)
+    #     wf = "./result/" + ty + "_result.pkl"
+    #     result_list = {}
+    #     for t in times:
+    #         print(t)
+    #         res = {}
+    #         for m in mems:
+    #             print(m)
+    #             if ty == "sketch":
+    #                 ans = sketch_measure(0, t, m)
+    #             elif ty == "opt":
+    #                 ans = opt_measure(0, t, m)
+    #             else:
+    #                 ans = measure_file(0, t, m)
+    #             res[m] = ans
+    #         result_list[t] = res
 
-        # with open(wf, 'wb') as f:
-        #     pickle.dump(result_list, f)
