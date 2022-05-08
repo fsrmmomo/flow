@@ -139,6 +139,8 @@ def read_pkl():
     #         print(l)
     #     print("len :" + str(len(s_list)))
 
+# def read_to_new():
+#
 
 #               0     1     2           3           4           5           6           7           8         9         10      11          12      13
 # feature = [总Bytes,包数, max bytes , min bytes, aver bytes, start windows,end win, start time, end time, max twin, min twin, aver twin, dst port, src port]
