@@ -1,3 +1,4 @@
+import errno
 import os
 import socket
 import struct
@@ -33,6 +34,8 @@ struct_len = 80
 
 big_key = []
 
+client_con = None
+
 
 def load_model():
     # 加载模型
@@ -64,16 +67,44 @@ def tcp_server():
         thd.start()
 
 
-def send_result(con):
+def tcp_client():
+    ser_host = "192.168.1.81"
+    ser_port = 8003
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((ser_host, ser_port))
+    global client_con
+    client_con = client
 
-    length = struct.pack('I',len(big_key)*4)
+
+def send_result(con, flag):
+    if flag:
+        length = struct.pack('i', len(big_key) * 4 + 4)
+    else:
+        length = struct.pack('i', len(big_key) * 4)
+    print(len(big_key))
     send_msg = b''
+    if flag:
+        send_msg += struct.pack('I', 0xFFFFFFFF)
+
     for key in big_key:
-        send_msg += struct.pack('I',key)
+        send_msg += struct.pack('I', key)
 
-    con.send(length)
-    con.send(send_msg)
-
+    try:
+        con.send(length)
+        con.send(send_msg)
+    except socket.error as e:
+        if e.errno == errno.ECONNRESET:
+            tcp_client()
+            # Handle disconnection -- close & reopen socket etc.
+            client_con.send(length)
+            client_con.send(send_msg)
+        else:
+            client_con.close()
+            tcp_client()
+            client_con.send(length)
+            client_con.send(send_msg)
+            print("未知错误")
+    # Other error, re-raise
 
 
 def recv_feature_and_send_result(con, address):
@@ -83,15 +114,17 @@ def recv_feature_and_send_result(con, address):
         # 接收客户端传过来的数据
         recv_data = con.recv(4)  # data是接收到的数据 addr是对方的地址 也就是发送方的地址
         if recv_data:
+            # print(len(recv_data))
             if len(recv_data) != 4:
                 print("error")
             else:
                 msg_size = struct.unpack("i", recv_data)[0]
-                print(msg_size)
+                # print(msg_size)
                 recv_msg = b''
                 recv_size = 0
                 while recv_size < msg_size:
-                    recv_msg += con.recv(1024)
+                    # recv_msg += con.recv(1024)
+                    recv_msg += con.recv(msg_size - recv_size)
                     recv_size = len(recv_msg)
                 for i in range(len(recv_msg) // struct_len):
                     data = recv_msg[i * struct_len:(i + 1) * struct_len]
@@ -110,84 +143,100 @@ def recv_feature_and_send_result(con, address):
                     feature[9] = dlist[9] / 1E6
                     feature[10] = dlist[10] / 1E6
                     feature.extend(dlist[11:14])
+                    # print(feature)
                     # if dlist[5] != 333333:
                     #     print("parse error")
                     # else:
                     #     print("right")
                     features.append(feature)
                     keys.append(dlist[14])
-                res = msg_size%struct_len
-                if res!=0:
-                    data = recv_msg[-1*res:]
-                    print(data.decode())
-                start = time.time()
+
+                start = time.perf_counter()
                 result = model.predict(features)
                 # result = []
-                for i,r in enumerate(result):
-                    if r == 1:
-                        big_key.append(keys[i])
-                send_result(con)
-                elapsed = (time.time() - start)
+                for i, r in enumerate(result):
+                    # if r == 1:
+                    big_key.append(keys[i])
+                    big_key.append(keys[i])
+                # send_result(con)
+                # send_result(client_con,True)
+                elapsed = (time.perf_counter() - start)
                 print("Time used:", elapsed)
+
+                res = msg_size % struct_len
+                if res != 0:
+                    data = recv_msg[-1 * res:]
+                    print(data.decode())
+                    if data.decode() == "clear":
+                        send_result(client_con, True)
+                    else:
+                        print("error data format")
+                else:
+                    send_result(client_con, False)
 
                 features.clear()
                 keys.clear()
+                big_key.clear()
+        else:
+            print("con closed")
+            con.close()
+            break
+    # if len(recv_data) > 0:
+    #     x += 1
+    #     if len(recv_data) == 4:
+    #         print("exit recv")
+    #         print(recv_data.decode())
+    #         continue
+    #     elif len(recv_data) == 80:
+    #         # for i in range(len(recv_data)//struct_len):
+    #
+    #         # data = recv_data[i*struct_len:(i+1)*struct_len]
+    #         data = recv_data
+    #         # print(type(data))
+    #         # print("收到的数据为：", str(data))
+    #         # print(len(data))
+    #         dlist = struct.unpack("5d9iI", data)
+    #         # print(dlist)
+    #         feature = [0 for i in range(11)]
+    #         feature[0] = dlist[0]
+    #         feature[1] = dlist[1]
+    #         feature[2] = dlist[5]
+    #         feature[3] = dlist[6]
+    #         feature[4] = dlist[7]
+    #         feature[5] = dlist[2]
+    #         feature[6] = dlist[3]
+    #         feature[7] = dlist[4]
+    #         feature[8] = dlist[8] / 1E6
+    #         feature[9] = dlist[9] / 1E6
+    #         feature[10] = dlist[10] / 1E6
+    #         feature.extend(dlist[11:14])
+    #
+    #         # if dlist[5] != 333333:
+    #         #     print("parse error")
+    #         # else:
+    #         #     print("right")
+    #
+    #         features.append(feature)
+    #         keys.append(dlist[14])
+    #     else:
+    #         print(x)
+    #         print(len(recv_data))
 
-        # if len(recv_data) > 0:
-        #     x += 1
-        #     if len(recv_data) == 4:
-        #         print("exit recv")
-        #         print(recv_data.decode())
-        #         continue
-        #     elif len(recv_data) == 80:
-        #         # for i in range(len(recv_data)//struct_len):
-        #
-        #         # data = recv_data[i*struct_len:(i+1)*struct_len]
-        #         data = recv_data
-        #         # print(type(data))
-        #         # print("收到的数据为：", str(data))
-        #         # print(len(data))
-        #         dlist = struct.unpack("5d9iI", data)
-        #         # print(dlist)
-        #         feature = [0 for i in range(11)]
-        #         feature[0] = dlist[0]
-        #         feature[1] = dlist[1]
-        #         feature[2] = dlist[5]
-        #         feature[3] = dlist[6]
-        #         feature[4] = dlist[7]
-        #         feature[5] = dlist[2]
-        #         feature[6] = dlist[3]
-        #         feature[7] = dlist[4]
-        #         feature[8] = dlist[8] / 1E6
-        #         feature[9] = dlist[9] / 1E6
-        #         feature[10] = dlist[10] / 1E6
-        #         feature.extend(dlist[11:14])
-        #
-        #         # if dlist[5] != 333333:
-        #         #     print("parse error")
-        #         # else:
-        #         #     print("right")
-        #
-        #         features.append(feature)
-        #         keys.append(dlist[14])
-        #     else:
-        #         print(x)
-        #         print(len(recv_data))
-
-        # key = dlist[14]
-        # print(feature)
-        # print(key)
-        # result =  predict_model.predict([feature])
-        # print(result)
-        # print(type(result))
-        # else:
-        #     print(len(keys))
-        #     con.close()
-        #     break
+    # key = dlist[14]
+    # print(feature)
+    # print(key)
+    # result =  predict_model.predict([feature])
+    # print(result)
+    # print(type(result))
+    # else:
+    #     print(len(keys))
+    #     con.close()
+    #     break
 
 
 if __name__ == '__main__':
     # recv_feature_and_send_result()
+    tcp_client()
     load_model()
     tcp_server()
 # print("addr",addr)
